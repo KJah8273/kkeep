@@ -1,0 +1,114 @@
+<!doctype html><html lang="en"><head><base href="https://cdn.jsdelivr.net/gh/thirstygithub/Buddy@f796da496885e21e568a29c3ec4682831316d58e/"><meta charset="utf-8"><title>Kick the Buddy · Kkeep</title><script>
+        
+        // ── Fetch Interceptor for Split Unity Files ──
+        (function() {
+            const MANIFEST = {
+  "57f01ad15ff5308aa4cf52709941de32.data": {
+    "parts": 3,
+    "totalSize": 54016808
+  },
+  "f8d0a9b6d8d08e138ce5cac7d62b5286.wasm": {
+    "parts": 2,
+    "totalSize": 35003662
+  }
+};
+            const origFetch = window.fetch;
+            
+            window.fetch = async function(resource, init) {
+                let url = typeof resource === 'string' ? resource : resource.url;
+                let fileName = url.substring(url.lastIndexOf('/') + 1);
+                
+                // If Unity is requesting a file that we split, intercept it!
+                if (MANIFEST[fileName]) {
+                    console.log("[Interceptor] Intercepted Unity fetch for: " + fileName);
+                    const info = MANIFEST[fileName];
+                    const fullBuffer = new Uint8Array(info.totalSize);
+                    let loadedBytes = 0;
+                    
+                    // Download all parts sequentially and stitch them
+                    for (let i = 0; i < info.parts; i++) {
+                        console.log("[Interceptor] Downloading " + fileName + ".part" + i + " ...");
+                        const res = await origFetch(url + '.part' + i, init);
+                        if (!res.ok) throw new Error("Failed to fetch part " + i);
+                        
+                        const buf = new Uint8Array(await res.arrayBuffer());
+                        fullBuffer.set(buf, loadedBytes);
+                        loadedBytes += buf.length;window.dispatchEvent(new CustomEvent('kkeep-download',{detail:'Downloading game… '+Math.round(loadedBytes/info.totalSize*100)+'%'}));
+                    }
+                    
+                    console.log("[Interceptor] Successfully stitched " + fileName + " in memory!");
+                    
+                    // Return a fake Response that looks exactly like the original file
+                    return new Response(fullBuffer, {
+                        status: 200,
+                        statusText: 'OK',
+                        headers: new Headers({
+                            'Content-Length': info.totalSize.toString(),
+                            'Content-Type': fileName.endsWith('.wasm') ? 'application/wasm' : 'application/octet-stream'
+                        })
+                    });
+                }
+                
+                // Otherwise, pass it through normally
+                return origFetch.apply(this, arguments);
+            };
+        })();
+
+        // Suppress benign missing screenshot errors
+        window.addEventListener('unhandledrejection', function(e) {
+            if(e.reason && e.reason.type === 'error') e.preventDefault();
+        });
+        
+        // Prevent console flooding which causes browser freeze!
+        const origWarn = console.warn;
+        console.warn = function(...args) {
+            if (typeof args[0] === 'string' && args[0].includes('Trying to get length of sound which is not loaded yet')) return;
+            origWarn.apply(console, args);
+        };
+    </script><script>
+      window.config = {
+        loader: "unity-2020",
+        debug: false,
+        maxRatio: 24 / 9,
+        minRatio: 9 / 24,
+
+        title: "Kick The Buddy",
+        numScreenshots: 0,
+
+        unityVersion: "6000.1.17f1",
+        unityWebglBuildUrl: "",
+
+        fileSize: 89,
+        cachedDecompressedFileSizes: {
+          "28b3d1e66bd62209d17eda502289c7a4.loader.js": 8040,
+          "57f01ad15ff5308aa4cf52709941de32.data": 37003286,
+          "ce98e22b32ee0b3ac40e99c9eeb6b1aa.framework.js": 93289,
+          "f8d0a9b6d8d08e138ce5cac7d62b5286.wasm": 8470412,
+        },
+        metadata: {
+          poki_template_version: 1,
+          background_color: "#FFFFFF",
+          background_filename: "97e023a6c108e067d148cf5c5b57128e.jpg",
+          code_filename: "f8d0a9b6d8d08e138ce5cac7d62b5286.wasm",
+          company_name: "Playgendary",
+          data_filename: "57f01ad15ff5308aa4cf52709941de32.data",
+          development_player: "false",
+          framework_filename:
+            "ce98e22b32ee0b3ac40e99c9eeb6b1aa.framework.js",
+          height: "600",
+          loader_filename: "28b3d1e66bd62209d17eda502289c7a4.loader.js",
+          product_name: "Kick The Buddy",
+          product_version: "2.11.1",
+          splash_screen_style: "Light",
+          unity_version: "6000.1.17f1",
+          use_data_caching: "true",
+          use_threads: "false",
+          use_wasm: "true",
+          use_webgl_1_0: "false",
+          use_webgl_2_0: "true",
+          width: "960",
+        },
+      };
+    </script><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"></head><body><script>const sdk=document.createElement("script");sdk.src=location.origin+"/games/poki-adapter.js";sdk.onload=()=>{const game=document.createElement("script");game.src="https://cdn.jsdelivr.net/gh/thirstygithub/Buddy@f796da496885e21e568a29c3ec4682831316d58e/unity-2020.js";document.body.append(game);};document.body.append(sdk);</script><script>window.kkeepArcade={slug:'kick-the-buddy',title:'Kick the Buddy',profile:'native'};
+ const shellStyle=document.createElement('link');shellStyle.rel='stylesheet';shellStyle.href=location.origin+'/games/arcade.css?v=2';document.head.append(shellStyle);
+ const shellScript=document.createElement('script');shellScript.type='module';shellScript.src=location.origin+'/games/arcade.js?v=2';document.body.append(shellScript);</script></body></html>

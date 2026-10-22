@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,height=device-height,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>How to Fish · Kkeep</title><link rel="stylesheet" href="/games/player.css?v=4">
+<link rel="stylesheet" href="/games/how-to-fish/controls.css?v=1">
+<style>
+#unity-loading-bar{position:fixed;top:max(18px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:min(380px,50vw);padding:6px 12px;pointer-events:none;background:transparent;z-index:3}#unity-loading-bar h1,.game-loading-note{display:none}#unity-status{font-size:12px;margin:6px 0;text-shadow:0 1px 3px #000}#unity-progress-bar-empty{height:3px}#unity-error{z-index:25;background:#102229f5;padding:20px;border-radius:16px}
+</style>
+</head>
+<body data-game="fish">
+<div id="unity-container"><canvas id="unity-canvas" tabindex="0" aria-label="How to Fish game"></canvas>
+<div id="unity-loading-bar"><h1>How to Fish</h1><div id="unity-progress-bar-empty"><div id="unity-progress-bar-full"></div></div><p id="unity-status" role="status">Preparing game…</p><p class="game-loading-note">Low quality is on for smoother iPad play.</p></div>
+<div id="unity-error" role="alert" style="display:none"></div></div>
+<script type="module" src="/games/player.js?v=4"></script><script type="module" src="/games/how-to-fish/loader.js?v=7"></script>
+</body>
+</html>

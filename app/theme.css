@@ -1,0 +1,13 @@
+@font-face{font-family:Kkeep Rounded;src:url('/fonts/Quicksand-Medium.ttf') format('truetype');font-weight:400 600;font-style:normal;font-display:swap}
+@font-face{font-family:Kkeep Rounded;src:url('/fonts/Quicksand-Bold.ttf') format('truetype');font-weight:650 900;font-style:normal;font-display:swap}
+:root,:root.dark{
+color-scheme:dark;--radius:.9rem;--destructive:#ee6579;
+--kk-background:#060608;--kk-surface:#101014;--kk-raised:#202027;--kk-text:#f4f3f8;--kk-muted:#aaa8b7;--kk-accent:#c8bcff;--kk-ink:#201633;--kk-highlight:#c8bcff;
+--background:var(--kk-background);--foreground:var(--kk-text);--card:var(--kk-surface);--card-foreground:var(--kk-text);--popover:var(--kk-surface);--popover-foreground:var(--kk-text);
+--primary:var(--kk-accent);--primary-foreground:var(--kk-ink);--secondary:var(--kk-raised);--secondary-foreground:var(--kk-text);--muted:var(--kk-raised);--muted-foreground:var(--kk-muted);--accent:var(--kk-raised);--accent-foreground:var(--kk-text);
+--border:color-mix(in srgb,var(--kk-text) 14%,var(--kk-surface));--input:var(--border);--ring:var(--kk-accent);--font-sans:'Kkeep Rounded',Arial,sans-serif;
+}
+body{font-family:var(--font-sans);background:var(--kk-background);color:var(--kk-text)}
+.workspace{background:var(--kk-background);color:var(--kk-text)}
+.workspace.home-mode{background:transparent}
+:root[data-kkeep-theme=daylight]{color-scheme:light}

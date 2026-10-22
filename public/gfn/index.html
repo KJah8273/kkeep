@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0e1411">
+  <title>GeForce NOW · Kkeep</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="GeForce NOW">
+  <link rel="icon" href="/icons/nvidia.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" sizes="180x180" href="/gfn/apple-touch-icon.png">
+  <link rel="manifest" href="/gfn/manifest.webmanifest">
+  <script defer src="/analytics/collect.js?v=1"></script>
+  <link rel="stylesheet" href="/gfn/style.css?v=2">
+  <script defer src="/gfn/config.js?v=1"></script>
+  <script defer src="/gfn/engine/scramjet.js?v=3"></script>
+  <script defer src="/gfn/engine/controller.api.js?v=2"></script>
+  <script defer src="/gfn/touch-controls.js?v=2"></script>
+  <script defer src="/gfn/runtime.js?v=5"></script>
+  <script defer src="/gfn/app.js?v=2"></script>
+</head>
+<body>
+  <header id="toolbar">
+    <a class="brand" href="/" aria-label="Back to Kkeep">kkeep</a>
+    <div class="app-name"><img src="/icons/nvidia.svg" width="26" height="26" alt=""><span>GeForce NOW</span></div>
+    <nav aria-label="GeForce NOW controls">
+      <button id="touch-controls" type="button" aria-pressed="false">Controls</button>
+      <button id="reload" type="button" aria-label="Reload GeForce NOW">Reload</button>
+      <button id="fullscreen" type="button">Full screen</button>
+    </nav>
+  </header>
+  <main id="frame" aria-label="GeForce NOW through Kkeep"></main>
+  <div id="loading" role="status"><span class="spinner" aria-hidden="true"></span>Opening GeForce NOW…</div>
+  <section id="error" role="alert" hidden>
+    <h1>Couldn’t finish connecting</h1>
+    <p id="error-message"></p>
+    <div><button id="retry" type="button">Retry</button><button id="wait" type="button">Keep waiting</button></div>
+  </section>
+  <div id="play-tools" hidden><button id="touch-quick" type="button" aria-pressed="false">Controls</button><button id="exit-fullscreen" type="button">Show toolbar</button></div>
+  <noscript>Enable JavaScript to open GeForce NOW through Kkeep.</noscript>
+</body>
+</html>

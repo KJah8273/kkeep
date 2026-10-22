@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0e1411">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Xbox Cloud">
+  <title>Xbox Cloud Gaming · Kkeep</title>
+  <link rel="icon" href="/icons/xbox.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="/xbox/apple-touch-icon.png">
+  <link rel="manifest" href="/xbox/manifest.webmanifest">
+  <script defer src="/analytics/collect.js?v=1"></script>
+  <link rel="stylesheet" href="/xbox/style.css?v=2">
+  <script defer src="/xbox/config.js?v=1"></script>
+  <script defer src="/xbox/engine/scramjet.js?v=3"></script>
+  <script defer src="/xbox/engine/controller.api.js?v=2"></script>
+  <script defer src="/xbox/media-compat.js?v=1"></script>
+  <script defer src="/xbox/signin-compat.js?v=1"></script>
+  <script defer src="/xbox/signin-window.js?v=1"></script>
+  <script defer src="/xbox/signin-status.js?v=1"></script>
+  <script defer src="/xbox/runtime.js?v=5"></script>
+  <script defer src="/xbox/app.js?v=3"></script>
+</head>
+<body>
+  <header id="toolbar">
+    <a class="brand" href="/" aria-label="Back to Kkeep">kkeep</a>
+    <div class="app-name"><img src="/icons/xbox.svg" width="26" height="26" alt=""><span>Xbox Cloud Gaming</span></div>
+    <nav aria-label="Xbox Cloud Gaming controls">
+      <button id="signin-window" type="button" hidden>Sign-in window</button>
+      <button id="reload" type="button" aria-label="Reload Xbox Cloud Gaming">Reload</button>
+      <button id="fullscreen" type="button">Full screen</button>
+    </nav>
+  </header>
+  <main id="frame" aria-label="Xbox Cloud Gaming through Kkeep"></main>
+  <div id="loading" role="status"><span class="spinner" aria-hidden="true"></span>Opening Xbox Cloud Gaming…</div>
+  <section id="error" role="alert" hidden>
+    <h1>Couldn’t finish connecting</h1>
+    <p id="error-message"></p>
+    <div><button id="signin-retry" type="button" hidden>Sign-in window</button><button id="retry" type="button">Retry</button><button id="wait" type="button">Keep waiting</button></div>
+    <details id="connection-details" hidden><summary>Connection details</summary><pre id="connection-report"></pre></details>
+  </section>
+  <aside id="signin-note" hidden aria-live="polite">
+    <p>Finish Microsoft sign-in in the new Kkeep window. Keep this page open; Xbox will return here when it finishes.</p>
+    <div><button id="signin-focus" type="button">Show sign-in window</button><button id="return-xbox" type="button">Back to Xbox</button></div>
+  </aside>
+  <button id="exit-fullscreen" type="button" hidden>Show controls</button>
+  <noscript>Enable JavaScript to open Xbox Cloud Gaming through Kkeep.</noscript>
+</body>
+</html>

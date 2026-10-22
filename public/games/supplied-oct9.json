@@ -1,0 +1,28 @@
+{
+  "uploads": {
+    "trees-hate-you.html": "a8e550d94a30e5b035209a00e8eda1e03409b1ab420e1238b621e1849f85bfec",
+    "stickman-duel.html": "078a2a70a83b4d428eb6d6699ab22d60aa86668b16f4620669bfbb025380adbc",
+    "angry-birds.html": "188621dc7161a556d6dd4ca62f9d338b707773d962a71765b0a546091d3ec219",
+    "bad-piggies.html": "f58184e22edbace8d436667466705ad55522c1d9c0677a0cff88e53090b0428b"
+  },
+  "nativeTouchEvidence": {
+    "stickman-duel": [
+      "Dual-Joystick Touch Controller",
+      "LeftJoystick",
+      "RightJoystick"
+    ],
+    "bad-piggies": [
+      "UsesTouchInput",
+      "TouchInput",
+      "FindTouch",
+      "AllowMultitouch"
+    ],
+    "angry-birds": [
+      "touchstart",
+      "touchmove",
+      "touchend",
+      "Tkd native touch coordinates"
+    ],
+    "trees-hate-you": "Developer documents WASD/arrow keys or gamepad. Kkeep supplies a movement stick."
+  }
+}

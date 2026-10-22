@@ -1,0 +1,50 @@
+how-to-fish — https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/4001890/c5ccd85d2910a21019adb2581011ac186741d030/capsule_616x353.jpg?t=1788788717
+stick-war-legacy — https://play-lh.googleusercontent.com/bTbNEd9ss0lqbNBWO0me6kJNnfvu0CNd2nNHdiYGym5pZvxCFMy2nPYTBsR_4mVcXgEBN2C6yvksSBMq1wmyyA=s0-br30
+Artwork belongs to the respective game publishers. Used to identify the games.
+tomb-of-the-mask — https://play.google.com/store/apps/details?id=com.playgendary.tom
+https://play-lh.googleusercontent.com/ko9YSDAKH0J7AJ54kCOX-FQ_N-cFBDrO67xTMTp02mmtf-g2jyY0pj9BReCYRPZWpzn3eO0xFixe6H90owVopkw=s0-br30
+subway-surfers — https://play.google.com/store/apps/details?id=com.kiloo.subwaysurf
+https://play-lh.googleusercontent.com/-b6afYVP9kkzaFgDT3bZpGy2ugh1AjzCiXS0o9aZw7bIZ5rCb3Bp8YAwIxyMjUGLjl1pD6ZFGxeKKGlXBw950g=s0-br30
+solar-smash — https://play.google.com/store/apps/details?id=com.paradyme.solarsmash
+https://play-lh.googleusercontent.com/CEQ7m2k4DA1fh8QKk8ArK5bfQM6_rL0pUHo9XAPslrWloX1AbQ2M6v7uOGQmUm6TtZSGlfvK4LGtB1O5lA551g=s0-br30
+kick-the-buddy — https://play.google.com/store/apps/details?id=com.playgendary.kickthebuddy
+https://play-lh.googleusercontent.com/GXhlshcE4xs4TBriwgzZtF1lMsRAcnbvC1HvDYxa9aRzaJBicf81e69X1TIUYCuc0sRSajWbvyGn1K3D1tbX7_0=s0-br30
+Idle Mining Empire — https://www.marketjs.com/item/idle-mining-empire/idle-mining-empire.jpg
+Geometry Dash — https://play.google.com/store/apps/details?id=com.robtopx.geometryjump
+https://play-lh.googleusercontent.com/tF6siCn3bM7JmXqB_iLqZm17DCI-C2h5X8I_n1-bqmkMJrN1sm2ZDrj8IAqSFtQcF85QX1Puvhsi_vcnSmmzAOk=s0-br30
+
+Trees Hate You — Developer cover art: https://tykenn.itch.io/trees-hate-you
+https://img.itch.zone/aW1nLzI5MzA2MDE1LnBuZw==/original/bgh3M5.png
+Angry Birds — original supplied port splash artwork: https://cdn.jsdelivr.net/gh/angrybirds-s4uk/angrybirdschrome-source-html5@e2ce95b41d3917560a2501f1478d6749e1b92b65/cors/fowl/images/Menu/loading_and_splash/Splash_AB_Logo_Chrome.jpg
+Stickman Duel (Supreme Duelist, Neron’s Brother) — https://apps.apple.com/us/app/supreme-duelist/id1477336151?uo=4
+https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/23/f8/93/23f8932c-2d53-8f76-eb16-fe392a1f7957/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg
+Bad Piggies (Rovio) — https://apps.apple.com/us/app/bad-piggies/id533451786?uo=4
+https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/86/f2/d0/86f2d00b-a564-747c-b5ad-934d9c417e0c/AppIcon-0-0-1x_U007emarketing-0-7-0-0-85-220.png/512x512bb.jpg
+
+2 3 4 Player Games — official Better World Games app cover: https://play.google.com/store/apps/details?id=com.ction.playergames
+https://play-lh.googleusercontent.com/Twm6l8YuKOmt-7PL3rrEM-5pv4uU5MoA0FK1IhOCCdXjutiYCaxB50wSYS1jNwjuN61cO-9xiWh_4W2w3iXvag=s0-br30
+
+هجولة الطارة — original Unity Play cover (retrieved 2026-10-12).
+Game: https://play.unity.com/en/games/ee08d7ff-bbd2-4760-8834-3b800392ed81/hgola-altara
+Image: https://play.unity.com/api/v1/files/file/535c98e2-699f-4ca9-859a-03a9109717ce/content
+The game is embedded using its official latest-build player; no signed build URLs are stored.
+
+Stick Fight — cover from the supplied Unity Play game.
+Game: https://play.unity.com/en/games/5b35bbb8-64f5-4e2e-ae44-cdfaac211def/stick-fight
+Cover: https://play.unity.com/api/v1/files/file/583f7b16-6208-4c58-8e1d-c22e185f6096/content
+Games added October 14, 2026 (UAE):
+blumgi-paintball — cover retrieved from https://geometrydashlite.online/upload/imgs/blumgi-paintball1.png
+mr-bullet — cover retrieved from https://blinkgames007.github.io/G/mr-bullet-c2/icon-256.png
+stickman-hook — cover retrieved from https://stickman-unblocked.github.io/appbg.webp
+drive-mad — cover retrieved from https://drivegame.io/play/drive-mad/webapp/cover.jpg
+
+Games added October 16, 2026:
+block-blast — https://4texas4.github.io/zenith/media/gameimages/block-blast.webp
+dune — https://4texas4.github.io/zenith/media/gameimages/dune.jpg
+draw-climber — https://4texas4.github.io/zenith/media/gameimages/draw-climber.webp
+hypersnake — https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=600,height=600,fit=cover,f=png/1bc281ffb3f3957fc7400591c633864a/hypersnake-logo.png
+Tomb of the Mask reuses its existing publisher artwork listed above.
+
+Fruit Ninja — original artwork from the supplied browser game (October 17, 2026, UAE).
+Game: https://fruit-ninja-web.testerqrr1.chatgpt.site/
+Image: https://fruit-ninja-web.testerqrr1.chatgpt.site/assets/LogoTiny.png

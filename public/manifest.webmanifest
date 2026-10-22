@@ -1,0 +1,21 @@
+{
+  "name": "Kkeep",
+  "short_name": "Kkeep",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#060608",
+  "theme_color": "#060608",
+  "icons": [
+    {
+      "src": "/kkeep-icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/kkeep-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

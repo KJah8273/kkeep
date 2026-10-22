@@ -1,0 +1,87 @@
+{
+  "Build/WebGL.wasm.002": {
+    "url": "/games/packed/21f784659589246b608f1f88.bin",
+    "bytes": 4199809,
+    "size": 16012037,
+    "sha256": "a191e794516dad7b7d8b78f9aa1b30e93344fcd711e03096c122a90f559a5677"
+  },
+  "Build/WebGL.wasm.000": {
+    "url": "/games/packed/913af632e573580e10a9f260.bin",
+    "bytes": 3627148,
+    "size": 16012037,
+    "sha256": "16a362b4301a4b863d05a1eb5bc17eaace4130bec70f48a0b103691b787fb1d3"
+  },
+  "Build/WebGL.wasm.001": {
+    "url": "/games/packed/fd4e7390178bf29d0e48c78d.bin",
+    "bytes": 3603107,
+    "size": 16012037,
+    "sha256": "73548a4d77bf5e183054c9b402b920ac13c01663e45c8428d132c784738fb7b4"
+  },
+  "Build/WebGL.loader.js": {
+    "url": "/games/packed/af3f5911003e5ce9f4074b79.bin",
+    "bytes": 9403,
+    "size": 27222,
+    "sha256": "093451e6f3d5a817a2ca68d1f8718cef6147dd35d71ad8f8cadb5d6ff3974816"
+  },
+  "Build/WebGL.framework.js": {
+    "url": "/games/packed/a995792f0720d3afc5117f1b.bin",
+    "bytes": 82019,
+    "size": 354118,
+    "sha256": "6103cdc74d9bada9e9ecb5f6a9ac0a8e8edfcba80cd648213bb110a35e66bf29"
+  },
+  "Build/WebGL.wasm.003": {
+    "url": "/games/packed/d2aa8e2aad37baf16fb17271.bin",
+    "bytes": 5054830,
+    "size": 16012035,
+    "sha256": "d613b1ed3e9e36bce6e343dbebd8087b8a363c802c4014e86e908ca8007faf5f"
+  },
+  "Build/WebGL.data.part2": {
+    "url": "/api/game-assets/d42ffd176a2d216e79fc3be0.bin",
+    "bytes": 16435338,
+    "size": 18022372,
+    "sha256": "eb97cf6a74c1b8b66cc0107f69165551d92911eb194547a3d9551ed4870dcbf4",
+    "rawUrl": "/api/game-assets/d42ffd176a2d216e79fc3be0.bin?raw=1"
+  },
+  "Build/WebGL.data.part4": {
+    "url": "/api/game-assets/91f94ede34b0637e3f63cdbb.bin",
+    "bytes": 15029418,
+    "size": 18022372,
+    "sha256": "3ce42985445641cc14d8367e8f6a9d9c10f41c01d0858451195cbf219e2477c1",
+    "rawUrl": "/api/game-assets/91f94ede34b0637e3f63cdbb.bin?raw=1"
+  },
+  "Build/WebGL.data.part3": {
+    "url": "/api/game-assets/4a01772abc91d0883c74ba21.bin",
+    "bytes": 15507876,
+    "size": 18022372,
+    "sha256": "7f603ebfecf5f6f40465081dfc5119e312640b53b65df40bc7977251e36d0b40",
+    "rawUrl": "/api/game-assets/4a01772abc91d0883c74ba21.bin?raw=1"
+  },
+  "Build/WebGL.data.part1": {
+    "url": "/api/game-assets/5eb283ae759a914865238a93.bin",
+    "bytes": 14792721,
+    "size": 18022372,
+    "sha256": "0656f3810a66892a25cc384b1b6e07434b353bf0f723c9d51d969e7a4baa9f6c",
+    "rawUrl": "/api/game-assets/5eb283ae759a914865238a93.bin?raw=1"
+  },
+  "Build/WebGL.data.part6": {
+    "url": "/api/game-assets/851b516a1b233985eaca867f.bin",
+    "bytes": 17416268,
+    "size": 18022372,
+    "sha256": "92e0d208d445442c3ef8ae7057409c530008f38541ffc9b49d92dd84b6aa5889",
+    "rawUrl": "/api/game-assets/851b516a1b233985eaca867f.bin?raw=1"
+  },
+  "Build/WebGL.data.part5": {
+    "url": "/api/game-assets/3164a682b96d22901b956289.bin",
+    "bytes": 17393813,
+    "size": 18022372,
+    "sha256": "959f0a20776a38342d98d231d31333718a91a59fe3d566452f17bd6356830155",
+    "rawUrl": "/api/game-assets/3164a682b96d22901b956289.bin?raw=1"
+  },
+  "Build/WebGL.data.part7": {
+    "url": "/api/game-assets/119350c3583958b39dd1a546.bin",
+    "bytes": 8819525,
+    "size": 18022369,
+    "sha256": "de73021180c4eef02ea5a0221a6921c178cfdaaada5c653070788c418c2689aa",
+    "rawUrl": "/api/game-assets/119350c3583958b39dd1a546.bin?raw=1"
+  }
+}

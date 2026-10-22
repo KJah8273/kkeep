@@ -1,0 +1,9 @@
+{
+  "source": "https://cdn.jsdelivr.net/gh/angrybirds-s4uk/angrybirdschrome-source-html5@e2ce95b41d3917560a2501f1478d6749e1b92b65/",
+  "gameSha256": "67688b86f34bfb9ea22154cd7ea6d0d9a3d34ca802d885781a31d9c509b1c0ab",
+  "compatibilityChanges": [
+    "Fit native renderer to viewport; keep touch coordinates unscaled",
+    "Pinned absolute asset base",
+    "Resume Web Audio only on player gesture"
+  ]
+}

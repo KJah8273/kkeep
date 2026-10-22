@@ -1,0 +1,16 @@
+{
+  "repo": "Ieoldj-hs101082/Koans",
+  "revision": "03568ae5309942037071f3e50daf892ae3539c31",
+  "files": {
+    "data.part0": 16000000,
+    "data.part1": 207597,
+    "wasm.part0": 16000000,
+    "wasm.part1": 14999457
+  },
+  "sha256": {
+    "data.part0": "ccfb81a31c252b6b3e14530de6f5a4299ab860a22a1c2f1039cdbb714939f47e",
+    "data.part1": "6ce249583d0629edd56b9610c22d60066ad3f3b9cf46631e92a9c0597b28431a",
+    "wasm.part0": "3b998d7de7028f0bc849053023775b60e7310cd8cea20fc9feafc1cde07549c7",
+    "wasm.part1": "988d4e4e86a531f665306132bbd097da4689ebd51b9be4e49945bcbcdffd2f6a"
+  }
+}

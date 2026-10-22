@@ -1,0 +1,263 @@
+/* KHA Proxy integration — AGPL-3.0-only. Corresponding source: /source/kha-proxy-source.zip */
+(()=>{
+  'use strict';
+  // The gaming launcher has its own engine, cookies and worker scope. Other
+  // apps retain their existing engine and sessions.
+  const gaming=window.KKEEP_ENGINE_PROFILE==='geforce';
+  const engine=gaming?{scope:'/gfn/',worker:'/gfn/proxy-sw.js',revision:1,prefix:'/gfn/browse/',script:'/gfn/engine/scramjet.js?v=1',inject:'/gfn/engine/controller.inject.js?v=1',wasm:'/gfn/engine/scramjet.wasm'}:{scope:'/',worker:'/proxy-sw.js',revision:8,prefix:'/browse/',script:'/engine/scramjet.js?v=8',inject:'/engine/controller.inject.js?v=6',wasm:'/engine/scramjet.wasm'};
+  let lite=false;
+  let adBlock=true;
+  const adHosts=['doubleclick.net','googlesyndication.com','googleadservices.com','adnxs.com','adsrvr.org','popads.net','popcash.net','propellerads.com','exoclick.com','trafficjunky.net'];
+  const isAd=host=>adHosts.some(domain=>host===domain||host.endsWith('.'+domain));
+  let startup;
+  let controller;
+  const responseListeners=new Set();
+  const socialHost=host=>/(^|\.)tiktok\.com$/.test(host)?'TikTok':/(^|\.)kick\.com$/.test(host)?'Kick':null;
+  const isTikTokMedia=host=>/(^|\.)(tiktok\.com|tiktokcdn\.com|tiktokcdn-us\.com|tiktokv\.com)$/.test(host);
+  const isTikTokFeed=url=>socialHost(url.hostname)==='TikTok'&&/^\/api\/(?:recommend|following|post)\/item_list\/?$/.test(url.pathname);
+  const needsMedia=host=>/(^|\.)(tiktok|youtube|youtube-nocookie)\.com$/.test(host);
+  const cache=new Map();
+  let cacheBytes=0;
+  const MAX_CACHE=16*1024*1024;
+  const encode=value=>btoa(Array.from(new TextEncoder().encode(JSON.stringify(value)),b=>String.fromCharCode(b)).join(''));
+  const decode=value=>JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(value),c=>c.charCodeAt(0))));
+  const bufferStream=data=>new ReadableStream({start(c){if(data.byteLength)c.enqueue(new Uint8Array(data));c.close();}});
+  const fromCached=c=>({status:c.status,statusText:c.statusText,headers:c.headers,body:bufferStream(c.bytes.slice(0))});
+  function snapchatResponse(url,requestHeaders,response){
+    // Snapchat web 3237bb7a mounts a notification-click effect even when
+    // service workers are unavailable. Scramjet intentionally hides that API.
+    // Guard only this effect; never expose Kkeep's real service-worker container
+    // or pretend that push registration succeeded. Authentication is untouched.
+    if(url.hostname!=='cf-st.sc-cdn.net'||!/^\/dw\/[^/]+\.js$/.test(url.pathname)||response.status!==200)return response;
+    let origin;try{origin=new URL(requestHeaders.get('referer')).hostname;}catch{return response;}
+    if(!/(^|\.)snapchat\.com$/.test(origin))return response;
+    const type=new Headers(response.headers).get('content-type')||'';
+    const charset=/charset\s*=\s*["']?([^;"'\s]+)/i.exec(type)?.[1];
+    if(!/^(?:application|text)\/(?:x-)?javascript\b/i.test(type)||(charset&&!/^utf-?8$/i.test(charset)))return response;
+    if(!(response.body instanceof ReadableStream))return response;
+    const effect=/(return\s+navigator\.serviceWorker)(\.addEventListener\((["'])message\3,([$A-Z_a-z][$\w]{0,127})\),\(\)=>navigator\.serviceWorker)(\.removeEventListener\(\3message\3,\4\))/g;
+    const decoder=new TextDecoder(),encoder=new TextEncoder();let pending='';
+    const patch=text=>text.replace(effect,(_match,start,middle,_quote,_listener,end)=>start+'?'+middle+'?'+end);
+    const body=response.body.pipeThrough(new TransformStream({
+      transform(chunk,controller){
+        // Keep a bounded tail so a network chunk cannot split the matching
+        // effect or a UTF-8 character. Backpressure and cancellation are native.
+        pending=patch(pending+decoder.decode(chunk,{stream:true}));
+        let cut=Math.max(0,pending.length-1024);
+        if(cut&&/[\uD800-\uDBFF]/.test(pending[cut-1]))cut--;
+        if(cut){controller.enqueue(encoder.encode(pending.slice(0,cut)));pending=pending.slice(cut);}
+      },
+      flush(controller){const rest=patch(pending+decoder.decode());if(rest)controller.enqueue(encoder.encode(rest));}
+    }));
+    return {...response,body,headers:response.headers.filter(([name])=>!['content-length','etag','content-md5'].includes(name.toLowerCase()))};
+  }
+  function remember(key,entry){
+    const old=cache.get(key);if(old)cacheBytes-=old.bytes.byteLength;cache.delete(key);
+    while(cacheBytes+entry.bytes.byteLength>MAX_CACHE&&cache.size){const key=cache.keys().next().value;cacheBytes-=cache.get(key).bytes.byteLength;cache.delete(key);}
+    cache.set(key,entry);cacheBytes+=entry.bytes.byteLength;
+  }
+  class EdgeTransport {
+    ready=true;
+    async init(){}
+    async request(remote,method,body,headers,signal){
+      const reqHeaders=new Headers(headers);
+      // Preserve the device identity and language on script-initiated requests too.
+      if(!reqHeaders.has('user-agent'))reqHeaders.set('user-agent',navigator.userAgent);
+      if(!reqHeaders.has('accept-language')&&navigator.language)reqHeaders.set('accept-language',navigator.language);
+      headers=Array.from(reqHeaders.entries());
+      const mayCache=method==='GET'&&!reqHeaders.has('cookie')&&!reqHeaders.has('authorization')&&!reqHeaders.has('range')&&!/no-cache|no-store/i.test(reqHeaders.get('cache-control')||'');
+      const key=remote.href+'\n'+(reqHeaders.get('accept')||'')+'\n'+(reqHeaders.get('accept-language')||'');
+      if(mayCache){const saved=cache.get(key);if(saved&&saved.expires>Date.now())return snapchatResponse(remote,reqHeaders,fromCached(saved));if(saved){cacheBytes-=saved.bytes.byteLength;cache.delete(key);}}
+      const meta=encode({url:remote.href,method,headers});
+      if(meta.length>64000)throw new Error('This site sent more request headers than the proxy can carry.');
+      const init={method:'POST',credentials:'same-origin',headers:{'X-Kha-Relay':'1','X-Kha-Meta':meta},body,signal,cache:'no-store',redirect:'error'};
+      if(body instanceof ReadableStream){
+        // Streaming request uploads are not supported by every browser. Bound buffering to 8 MiB.
+        const reader=body.getReader(),parts=[];let size=0;
+        for(;;){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>8*1024*1024){await reader.cancel();throw new Error('Uploads through this proxy are limited to 8 MB.');}parts.push(value);}
+        init.body=new Blob(parts);
+      }
+      let response;try{response=await fetch('/api/relay',init);}catch{throw new Error('This browser could not reach the relay. Open the shared home-page link in Safari or Chrome, then use Settings → Connection & repair.');}
+      if(!response.ok){let message='The proxy connection failed.';try{message=(await response.json()).error||message;}catch{}throw new Error(message);}
+      const raw=response.headers.get('X-Kha-Response');
+      if(!raw)throw new Error('Your proxy session has ended. Refresh the main page and sign in again.');
+      const result=decode(raw);
+      const app=socialHost(remote.hostname);
+      const kind=reqHeaders.get('sec-fetch-dest')||'';
+      if(app&&(['document','iframe'].includes(kind)||/^\/(?:api|v[12])\//.test(remote.pathname))){
+        for(const listener of responseListeners)try{listener({app,url:remote.href,status:result.status});}catch{}
+      }
+      const content=new Headers(result.headers);
+      const cc=content.get('cache-control')||'';
+      const maxAge=Number(/(?:^|,)\s*max-age=(\d+)/i.exec(cc)?.[1]||0);
+      const age=Number(content.get('age')||0);
+      const cacheable=mayCache&&result.status===200&&maxAge>age&&!/private|no-store|no-cache/i.test(cc)&&!content.has('set-cookie')&&!content.has('vary')&&/^(text\/css|application\/(javascript|x-javascript)|text\/javascript|image\/|font\/)/i.test(content.get('content-type')||'');
+      if(cacheable&&Number(content.get('content-length'))>0&&Number(content.get('content-length'))<=2*1024*1024){
+        const clone=response.clone();
+        (async()=>{const reader=clone.body.getReader();const parts=[];let size=0;for(;;){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>2*1024*1024){reader.cancel().catch(()=>{});return;}parts.push(value);}const bytes=new Uint8Array(size);let pos=0;for(const p of parts){bytes.set(p,pos);pos+=p.byteLength;}remember(key,{...result,bytes:bytes.buffer,expires:Date.now()+Math.min(maxAge-age,3600)*1000});})().catch(()=>{});
+      }
+      return snapchatResponse(remote,reqHeaders,{...result,body:response.body||bufferStream(new ArrayBuffer(0))});
+    }
+    connect(url,protocols,headers,onopen,onmessage,onclose,onerror){
+      const endpoint=new URL('/api/socket',location.href);endpoint.protocol=location.protocol==='https:'?'wss:':'ws:';
+      const socket=new WebSocket(endpoint);socket.binaryType='arraybuffer';let connected=false;
+      socket.onopen=()=>socket.send(JSON.stringify({url:url.href,protocols,headers}));
+      socket.onmessage=e=>{if(!connected){try{const msg=JSON.parse(e.data);if(msg.type==='error'){onerror(msg.error);return;}if(msg.type==='open'){connected=true;onopen(msg.protocol||'', '');}}catch{onerror('Invalid proxy handshake.');}return;}onmessage(e.data);};
+      socket.onerror=()=>onerror('This live connection could not be established through the proxy.');
+      socket.onclose=e=>onclose(e.code,e.reason);
+      return [data=>socket.send(data),(code,reason)=>{try{socket.close(code===1000||(code>=3000&&code<=4999)?code:1000,(reason||'').slice(0,100));}catch{socket.close();}}];
+    }
+  }
+  async function connectWorker(){
+    const workers=navigator.serviceWorker;
+    const usable=worker=>{
+      if(worker?.state!=='activated')return false;
+      const url=new URL(worker.scriptURL);
+      return url.origin===location.origin&&url.pathname===engine.worker;
+    };
+    const bounded=async promise=>{
+      let timer;
+      try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('The proxy connection did not start. Tap Retry to reconnect.')),15000);})]);}
+      finally{clearTimeout(timer);}
+    };
+    // register() performs a network update even when Safari already has a
+    // working worker. Reuse that worker instead of blocking every return visit.
+    if(usable(workers.controller)){
+      workers.getRegistration?.(engine.scope).then(registration=>registration?.update?.()).catch(()=>{});
+      return workers.controller;
+    }
+    let registration=workers.getRegistration?await bounded(workers.getRegistration(engine.scope)).catch(()=>undefined):undefined;
+    if(!registration||new URL(registration.scope).pathname!==engine.scope)registration=await bounded(workers.register(engine.worker+'?v='+engine.revision,{scope:engine.scope,updateViaCache:'none'}));
+    if(!usable(registration.active))await new Promise((resolve,reject)=>{
+      const watched=new Set();
+      const cleanup=()=>{clearTimeout(timer);registration.removeEventListener?.('updatefound',check);for(const worker of watched)worker.removeEventListener('statechange',check);};
+      const check=()=>{
+        if(usable(registration.active)){cleanup();resolve();return;}
+        const candidates=[registration.active,registration.waiting,registration.installing].filter(Boolean);
+        if(!candidates.length||candidates.every(worker=>worker.state==='redundant')){cleanup();reject(new Error('Proxy activation failed. Tap Retry to reconnect.'));return;}
+        for(const worker of candidates)if(!watched.has(worker)){watched.add(worker);worker.addEventListener('statechange',check);}
+      };
+      const timer=setTimeout(()=>{cleanup();reject(new Error('Proxy activation timed out. Tap Retry to reconnect.'));},20000);
+      registration.addEventListener?.('updatefound',check);check();
+    });
+    if(usable(workers.controller))return workers.controller;
+    return new Promise((resolve,reject)=>{
+      const cleanup=()=>{clearTimeout(timer);workers.removeEventListener('controllerchange',check);};
+      const check=()=>{if(usable(workers.controller)){cleanup();resolve(workers.controller);}};
+      const timer=setTimeout(()=>{cleanup();reject(new Error('Safari has not connected this tab to the proxy yet. Refresh Kkeep to reconnect.'));},15000);
+      workers.addEventListener('controllerchange',check);check();
+    });
+  }
+  async function initialize(){
+    if(controller)return controller;
+    const worker=await connectWorker();
+    const candidate=new $scramjetController.Controller({serviceworker:worker,transport:new EdgeTransport(),config:{prefix:engine.prefix,scramjetPath:engine.script,injectPath:engine.inject,wasmPath:engine.wasm}});
+    let timer;
+    await Promise.race([candidate.wait(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('The proxy could not start. Refresh the page to reconnect.')),25000);})]).finally(()=>clearTimeout(timer));
+    controller=candidate;
+    return controller;
+  }
+  function expiredError(context,props,callbacks){
+    if(!['document','iframe'].includes(context.rawrequest.destination))return;
+    callbacks.onError(/same origin/.test(context.error?.message||'')?'This app produced a link back to Kkeep instead of its own website. Retry the tab; if it repeats, this app still has a proxy compatibility issue.':context.error?.message||'This website could not be reached through the proxy.');
+    props.suppressError=true;
+    props.setResponse={body:'',status:502,statusText:'Proxy navigation failed',headers:[['Content-Type','text/plain'],['Cache-Control','no-store']]};
+  }
+  window.KHAProxy={
+    setLite(value){lite=!!value;},
+    setAdBlock(value){adBlock=!!value;},
+    async mount(container,callbacks,options={}){
+      startup??=initialize().catch(e=>{startup=undefined;controller=undefined;throw e;});
+      const ctrl=await startup;
+      const element=document.createElement('iframe');element.title='Proxied website';element.referrerPolicy='no-referrer';
+      const nativePopups=gaming||options.nativePopups===true;
+      // Scramjet rewrites native sign-in windows and preserves their opener.
+      // Do not replace their WindowProxy with null: OAuth uses it to finish.
+      element.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms allow-downloads allow-pointer-lock allow-presentation'+(nativePopups?' allow-popups allow-popups-to-escape-sandbox':''));
+      element.setAttribute('allow','fullscreen; autoplay; encrypted-media; clipboard-write; gamepad'+(gaming||options.mediaPermissions?'; microphone; camera':''));
+      element.setAttribute('allowfullscreen','');
+      const frame=ctrl.createFrame(element);
+      const plugin=new $scramjet.Plugin('kha-browser');
+      let disposed=false;let observer;let timer;let blankTimer;let loadedUrl='';let warning='';let feedNotice='';let navigationError=false;
+      const failures=new Map();
+      const report=({app,url,status})=>{if(disposed||!loadedUrl||socialHost(new URL(loadedUrl).hostname)!==app)return;if(status>=400)failures.set(url,status);else failures.delete(url);if(failures.size>20)failures.delete(failures.keys().next().value);const failed=failures.values().next().value;warning=failed?`${app} returned HTTP ${failed} for page or feed content. ${failed===429?'Wait before retrying.':'The full feed may not work through this proxy.'}`:'';callbacks.onWarning?.(feedNotice||warning);};
+      responseListeners.add(report);
+      const notifyLoaded=()=>{if(disposed||!loadedUrl||navigationError)return;let doc;try{if(element.contentWindow.location.href==='about:blank')return;doc=element.contentDocument;}catch{return;}clearTimeout(timer);clearTimeout(blankTimer);callbacks.onLoaded();if(/(^|\.)tiktok\.com$/.test(new URL(loadedUrl).hostname)&&new URL(loadedUrl).pathname==='/404')warning='TikTok sent this session to its 404 page. Its full feed is unavailable in this session.';callbacks.onWarning?.(feedNotice||warning);if(doc?.title)callbacks.onTitle(doc.title);blankTimer=setTimeout(()=>{if(disposed)return;try{const body=element.contentDocument?.body;const content=body?.innerText?.trim();const visual=body?.querySelector('video,canvas,img,svg,iframe,input,button');if(!body||(!content&&!visual))callbacks.onError('This website loaded an empty page. Its scripts may not support this proxy. Tap Reload to retry through Kkeep.');}catch{}},7000);};
+      const startLoading=()=>{if(disposed)return;clearTimeout(timer);timer=setTimeout(()=>{if(!disposed)callbacks.onError('This page is taking longer than expected. You can keep waiting or reload through Kkeep.');},45000);};
+      plugin.tap(frame.hooks.fetch.intercept,(context,props)=>{
+        if(adBlock&&isAd(context.parsed.url?.hostname||'')){props.response={body:null,status:204,statusText:'Blocked by Kkeep',headers:$scramjet.ScramjetHeaders.fromRawHeaders([['Cache-Control','no-store']])};return;}
+        if(lite&&!needsMedia(new URL(loadedUrl||'https://example.com').hostname)&&['video','audio'].includes(context.parsed.destination))props.response={body:'',status:200,statusText:'OK',headers:$scramjet.ScramjetHeaders.fromRawHeaders([['Content-Type','text/plain'],['Cache-Control','no-store']])};
+        if(['document','iframe'].includes(context.parsed.destination)&&context.parsed.url.href===loadedUrl)startLoading();
+      });
+      plugin.tap(frame.hooks.fetch.request,(context,props)=>{
+        // The pinned rewriter adds Origin to every subresource. Native no-CORS
+        // <video>/<audio> GETs omit it. Preserve actual CORS requests, signed
+        // URLs, Referer, Range and the engine's domain-scoped cookie selection.
+        if(!['video','audio'].includes(context.parsed.destination)||!isTikTokMedia(props.url.hostname))return;
+        if(socialHost(context.parsed.clientUrl?.hostname||'')!=='TikTok')return;
+        const headers=new Headers(props.init.headers);
+        if(headers.get('sec-fetch-mode')!=='no-cors'||!['GET','HEAD'].includes(props.init.method))return;
+        headers.delete('origin');props.init.headers=Array.from(headers.entries());
+      });
+      plugin.tap(frame.hooks.fetch.response,(context,props)=>{
+        if(disposed||!isTikTokFeed(context.parsed.url)||props.response.status!==200)return;
+        const reportEmpty=empty=>{
+          if(disposed||!loadedUrl||socialHost(new URL(loadedUrl).hostname)!=='TikTok')return;
+          feedNotice=empty?'TikTok returned an empty feed response. If TikTok asks for verification, complete it in this proxy tab. Otherwise wait a moment before retrying.':'';
+          callbacks.onWarning?.(feedNotice||warning);
+        };
+        // Observe bytes as the page consumes them. Do not buffer videos, read
+        // private feed data, manufacture results, replay signatures or retry a
+        // challenge. Cancellation and all original bytes remain unchanged.
+        const body=props.response.body;
+        if(body instanceof ReadableStream){
+          let received=false;
+          props.response.body=body.pipeThrough(new TransformStream({transform(chunk,controller){if(chunk?.byteLength||typeof chunk==='string'&&chunk.length){if(!received)reportEmpty(false);received=true;}controller.enqueue(chunk);},flush(){if(!received)reportEmpty(true);}}));
+        }else reportEmpty(!body||(typeof body==='string'&&!body.length));
+      });
+      plugin.tap(frame.hooks.error.request,(context,props)=>{if(!disposed){if(['document','iframe'].includes(context.rawrequest.destination)){navigationError=true;clearTimeout(timer);clearTimeout(blankTimer);}expiredError(context,props,callbacks);}});
+      plugin.tap(frame.hooks.init.pre,context=>{
+        if(!context.isTopLevel||nativePopups)return;
+        // Route new-window requests into the shell's tabs without allowing popups to escape.
+        context.client.Proxy('window.open',{apply(ctx){const raw=ctx.args[0];if(raw){try{const destination=new URL(String(raw),context.client.url);if(['http:','https:'].includes(destination.protocol))callbacks.onOpen(destination.href);}catch{}}ctx.return(null);}});
+      });
+      plugin.tap(frame.hooks.init.post,context=>{
+        if(!context.isTopLevel||disposed)return;
+        navigationError=false;loadedUrl=context.client.url.href;callbacks.onNavigate(loadedUrl);startLoading();
+        plugin.tap(context.client.hooks.lifecycle.navigate,(_,props)=>{if(disposed)return;try{const url=new URL(props.url);if(['http:','https:'].includes(url.protocol)){loadedUrl=url.href;callbacks.onNavigate(url.href);queueMicrotask(notifyLoaded);}}catch{}});
+        observer?.disconnect();
+        const doc=context.window.document;
+        // Optional presentation hook for a standalone game. The provider's
+        // document, SDK, sign-in and game frame keep their normal lifecycle.
+        callbacks.onDocument?.(doc,loadedUrl);
+        if(socialHost(new URL(loadedUrl).hostname)==='TikTok'){
+          const inline=e=>{const v=e.target;if(v?.tagName==='VIDEO'){v.playsInline=true;v.setAttribute('playsinline','');v.setAttribute('webkit-playsinline','');}};
+          doc.addEventListener('loadstart',inline,true);doc.addEventListener('loadedmetadata',inline,true);
+          doc.querySelectorAll('video').forEach(v=>inline({target:v}));
+          doc.addEventListener('error',e=>{if(disposed||e.target?.tagName!=='VIDEO')return;const code=e.target.error?.code||0;const reason=({1:'loading was interrupted',2:'the media connection failed',3:'Safari could not decode the video',4:'this video source could not be played'})[code]||'the video did not load';callbacks.onWarning?.(`TikTok video error ${code}: ${reason}. Reload to retry through Kkeep.`);},true);
+          doc.addEventListener('playing',e=>{if(!disposed&&e.target?.tagName==='VIDEO')callbacks.onWarning?.(feedNotice||warning);},true);
+        }
+        const title=()=>{if(!disposed&&doc.title)callbacks.onTitle(doc.title);};
+        observer=new MutationObserver(title);if(doc.head)observer.observe(doc.head,{subtree:true,childList:true,characterData:true});title();
+        context.window.addEventListener('load',notifyLoaded,{once:true});
+        // YouTube can keep secondary images/requests pending after its document
+        // is usable. Don't leave Kkeep's connection spinner waiting on those.
+        context.window.addEventListener('DOMContentLoaded',()=>{title();if(!disposed&&!navigationError&&/(^|\.)youtube\.com$/.test(new URL(loadedUrl).hostname)){clearTimeout(timer);callbacks.onLoaded();}else if(doc.readyState==='complete')notifyLoaded();},{once:true});
+        if(doc.readyState==='complete')notifyLoaded();
+        if(!nativePopups)context.window.addEventListener('click',e=>{const anchor=e.target?.closest?.('a[target="_blank"]');if(!anchor||e.defaultPrevented)return;e.preventDefault();try{const remote=new URL(anchor.getAttribute('href'),context.client.url);if(['http:','https:'].includes(remote.protocol))callbacks.onOpen(remote.href);}catch{};});
+      });
+      const recoverSession=e=>{
+        if(disposed||e.origin!==location.origin||e.source!==element.contentWindow||e.data?.type!=='kkeep-session-expired')return;
+        startup=undefined;controller=undefined;callbacks.onRecover?.();
+      };
+      window.addEventListener('message',recoverSession);
+      element.addEventListener('load',notifyLoaded);
+      container.appendChild(element);
+      return {
+        go(url){navigationError=false;failures.clear();warning='';feedNotice='';callbacks.onWarning?.('');loadedUrl=url;callbacks.onNavigate(url);startLoading();frame.go(url);},
+        back(){frame.back();},forward(){frame.forward();},reload(){navigationError=false;failures.clear();warning='';feedNotice='';callbacks.onWarning?.('');cache.clear();cacheBytes=0;startLoading();frame.go(loadedUrl);},
+        destroy(){disposed=true;window.removeEventListener('message',recoverSession);responseListeners.delete(report);clearTimeout(timer);clearTimeout(blankTimer);observer?.disconnect();element.src='about:blank';element.remove();const index=ctrl.frames.indexOf(frame);if(index>=0)ctrl.frames.splice(index,1);}
+      };
+    }
+  };
+})();
