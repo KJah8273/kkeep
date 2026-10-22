@@ -1,0 +1,105 @@
+{
+  "environment": "Managed Linux, Node v24.19.0",
+  "method": "gzip of Vite output files, not browser network or frame timing",
+  "baselineAllJSAndCSSGzip": 178110,
+  "releaseAllJSAndCSSGzip": 205613,
+  "deferredSettingsAndAtmosphereGzip": 13304,
+  "firstPaintPosterScriptGzip": 614,
+  "estimatedEagerAssetIncreaseGzip": 14813,
+  "eagerIncreaseBudgetBytes": 25000,
+  "budgetPass": true,
+  "scenePosterTotalBytes": 42076,
+  "files": [
+    {
+      "file": "atmosphere-BpjIxTpC.js",
+      "bytes": 1448,
+      "gzip": 910
+    },
+    {
+      "file": "framework-CXnKph_e.js",
+      "bytes": 189805,
+      "gzip": 59029
+    },
+    {
+      "file": "hgola-player-upIfjYAB.js",
+      "bytes": 1906,
+      "gzip": 1020
+    },
+    {
+      "file": "index-B93Z--PP.css",
+      "bytes": 202708,
+      "gzip": 32155
+    },
+    {
+      "file": "index-D-1i36ga.js",
+      "bytes": 81699,
+      "gzip": 24663
+    },
+    {
+      "file": "layout-segment-context-BdPqbkcC.js",
+      "bytes": 288,
+      "gzip": 227
+    },
+    {
+      "file": "proxy-browser-Bvn_VmOX.js",
+      "bytes": 99406,
+      "gzip": 30963
+    },
+    {
+      "file": "query-CMEgHEdo.js",
+      "bytes": 1564,
+      "gzip": 776
+    },
+    {
+      "file": "rolldown-runtime-S-ySWqyJ.js",
+      "bytes": 694,
+      "gzip": 422
+    },
+    {
+      "file": "router-BAb1qKi9.js",
+      "bytes": 9065,
+      "gzip": 3066
+    },
+    {
+      "file": "settings-CtfA8Yes.js",
+      "bytes": 39099,
+      "gzip": 12394
+    },
+    {
+      "file": "shortcuts-B_TXGtRe.js",
+      "bytes": 122338,
+      "gzip": 39065
+    },
+    {
+      "file": "stick-fight-player-BbUT2Tr1.js",
+      "bytes": 1762,
+      "gzip": 923
+    }
+  ],
+  "scenes": [
+    {
+      "file": "aurora-glass.svg",
+      "bytes": 6122
+    },
+    {
+      "file": "deep-orbit.svg",
+      "bytes": 8686
+    },
+    {
+      "file": "desert-after-dark.svg",
+      "bytes": 7552
+    },
+    {
+      "file": "lunar-silence.svg",
+      "bytes": 6768
+    },
+    {
+      "file": "midnight-ocean.svg",
+      "bytes": 9538
+    },
+    {
+      "file": "paper-depth.svg",
+      "bytes": 3410
+    }
+  ]
+}

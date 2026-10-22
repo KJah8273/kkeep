@@ -1,0 +1,85 @@
+{
+  "mode": "built-in image_gen__imagegen",
+  "requested_long_edge": 3840,
+  "result": "Four generated enhancements completed. Actual outputs are 1445\u20131676 pixels on their long edges. These are not 4K and do not recover verifiable native detail.",
+  "originals_preserved": true,
+  "resizing_or_external_image_editing_used": false,
+  "assets": [
+    {
+      "key": "chrome-stars",
+      "input_path": "/workspace/scratch/27c324a5d2e8/upload/IMG_9752.jpeg",
+      "input_dimensions": [
+        1125,
+        710
+      ],
+      "generated_path": "/workspace/scratch/27c324a5d2e8/generated_images/exec-9b55d97a-b264-48fd-9075-9a22c1058806.png",
+      "staged_path": "/workspace/scratch/27c324a5d2e8/wallpaper-staging/chrome-stars-enhanced.png",
+      "dimensions": [
+        1579,
+        996
+      ],
+      "bytes": 754936,
+      "quality_notes": "Five stars and overall placement are preserved. Metallic edges and internal reflections have small generative differences; output is not a pixel-identical enlargement.",
+      "final_prompt": "Use case: precise-object-edit.\nAsset type: high-resolution wallpaper restoration.\nInput image: the supplied file is the edit target, not a style reference.\nPrimary request: faithfully upscale and restore this exact original wallpaper at the highest supported resolution, targeting a 3840-pixel long edge while retaining its original 1125:710 landscape aspect ratio and entire crop. Keep the artwork exactly as supplied; this is an upscale, not a remake or reinterpretation.\nPreserve exactly: five curved four-point blue chrome stars, their count, silhouettes, scale, placement, rotations and spacing; cobalt/cyan metallic reflections, bright white edges and the small warm highlights; completely black background and all surrounding negative space.\nChange only resolution and subtle cleanup of compression/jagged edges. Keep the same composition, colors and contrast. Do not invent texture or reshape highlights. No added objects, title, caption, logo, border or watermark. No cropping, padding, extension, stylistic remix or scene reconstruction.",
+      "site_asset": "/workspace/scratch/27c324a5d2e8/kkeep/public/wallpapers/chrome-stars-enhanced.png",
+      "original_preview": "/workspace/scratch/27c324a5d2e8/kkeep/public/wallpapers/chrome-stars-preview.jpg"
+    },
+    {
+      "key": "turquoise-face",
+      "input_path": "/workspace/scratch/27c324a5d2e8/upload/IMG_9755.jpeg",
+      "input_dimensions": [
+        1125,
+        629
+      ],
+      "generated_path": "/workspace/scratch/27c324a5d2e8/generated_images/exec-128e8f21-f3df-46da-aa1d-05c1b30c4b82.png",
+      "staged_path": "/workspace/scratch/27c324a5d2e8/wallpaper-staging/turquoise-face-enhanced.png",
+      "dimensions": [
+        1676,
+        938
+      ],
+      "bytes": 1234140,
+      "quality_notes": "Face, expression and crop are preserved closely. Outlines, eye contours and subtle surface color/texture differ slightly; output is not a pixel-identical enlargement.",
+      "final_prompt": "Use case: precise-object-edit.\nAsset type: high-resolution wallpaper restoration.\nInput image: the supplied file is the edit target, not a style reference.\nPrimary request: faithfully upscale and restore this exact original cartoon-face wallpaper at the highest supported resolution, targeting a 3840-pixel long edge while retaining its original 1125:629 landscape aspect ratio and entire crop. Keep the artwork exactly as supplied; this is an upscale, not a redraw or reinterpretation.\nPreserve exactly: the turquoise background; original flat-color cartoon face, thick black outlines, large half-closed ivory eyes and black pupils, inward-slanting black eyebrows, orange-red nose, pale cyan angular mouth/teeth, dark turquoise eye contours and three cheek/chin marks, and black diagonal strokes cropped at the lower corners. Preserve every shape, line thickness, facial expression, alignment, color, position and original edge crop.\nChange only resolution and subtle cleanup of compression/jagged edges. Do not simplify, restyle or add shading. No added objects, title, caption, logo, border or watermark. No cropping, padding, extension or scene reconstruction.",
+      "site_asset": "/workspace/scratch/27c324a5d2e8/kkeep/public/wallpapers/turquoise-face-enhanced.png",
+      "original_preview": "/workspace/scratch/27c324a5d2e8/kkeep/public/wallpapers/turquoise-face-preview.jpg"
+    },
+    {
+      "key": "brick-planets",
+      "input_path": "/workspace/scratch/27c324a5d2e8/upload/IMG_9754.jpeg",
+      "input_dimensions": [
+        1125,
+        741
+      ],
+      "generated_path": "/workspace/scratch/27c324a5d2e8/generated_images/exec-c63708c9-7bed-4407-af23-87bb201760ed.png",
+      "staged_path": "/workspace/scratch/27c324a5d2e8/wallpaper-staging/brick-planets-enhanced.png",
+      "dimensions": [
+        1546,
+        1017
+      ],
+      "bytes": 1769310,
+      "quality_notes": "Two-planet composition and principal brick structures are preserved. Fine stud lettering, brick details and star shapes/positions contain generative changes; some stars are more stylized and bright.",
+      "final_prompt": "Use case: precise-object-edit.\nAsset type: high-resolution wallpaper restoration.\nInput image: the supplied file is the edit target, not a style reference.\nPrimary request: faithfully upscale and restore this exact original LEGO-brick space wallpaper at the highest supported resolution, targeting a 3840-pixel long edge while retaining its original 1125:741 landscape aspect ratio and entire crop. Keep the artwork exactly as supplied; this is an upscale, not a remake or reinterpretation.\nPreserve exactly: the enormous curved blue brick planet entering from bottom/right and cropped at those edges; every visible existing stud, seam and colored continent piece, including the white block cluster near the top-right; the small green brick planet on the left; the same black star field and scattered blue-white stars; blue atmospheric rim light, original highlights, shadows and perspective. Retain the original brand details already on existing bricks without adding any branding.\nChange only resolution and subtle cleanup of compression/jagged edges. Do not add, remove, move or redesign bricks, stars, planets or surface structures. No added title, caption, logo, border or watermark. No cropping, padding, extension, stylistic remix or scene reconstruction.",
+      "site_asset": "/workspace/scratch/27c324a5d2e8/kkeep/public/wallpapers/brick-planets-enhanced.png",
+      "original_preview": "/workspace/scratch/27c324a5d2e8/kkeep/public/wallpapers/brick-planets-preview.jpg"
+    },
+    {
+      "key": "sleepy-train",
+      "input_path": "/workspace/scratch/27c324a5d2e8/upload/IMG_9753.jpeg",
+      "input_dimensions": [
+        1125,
+        847
+      ],
+      "generated_path": "/workspace/scratch/27c324a5d2e8/generated_images/exec-f5a4d145-ed5a-41ba-9b53-a5c41865ea99.png",
+      "staged_path": "/workspace/scratch/27c324a5d2e8/wallpaper-staging/sleepy-train-enhanced.png",
+      "dimensions": [
+        1445,
+        1088
+      ],
+      "bytes": 1780288,
+      "quality_notes": "Snoopy's pose, sleep letters, blue seats and train framing are preserved closely. Small train signage/display text is altered or garbled, and subtle photographic details/textures were reconstructed.",
+      "final_prompt": "Use case: precise-object-edit.\nAsset type: high-resolution wallpaper restoration.\nInput image: the supplied file is the edit target, not a style reference.\nPrimary request: faithfully upscale and restore this exact original Snoopy-on-a-train wallpaper at the highest supported resolution, targeting a 3840-pixel long edge while retaining its original 1125:847 landscape aspect ratio and entire crop. Keep the artwork exactly as supplied; this is an upscale, not a remake or reinterpretation.\nPreserve exactly: the photographed empty metallic train interior, left doors and tall foreground pole, horizontal rails, ceiling panels and vents, window arrangement, all existing signs/displays and their placement, cobalt-blue bench seats and blue floor; the same flat white Snoopy cartoon lying asleep across the lower-left seats with identical pose, black outlines, hands, nose and ear; the existing white outlined three sleep letters above his head. Retain original text and signage as shown; do not hallucinate or replace illegible small text.\nChange only resolution and subtle cleanup of compression/jagged edges. Preserve original composition, perspective, object count, colors, lighting and photographic/cartoon mixed style. No added characters, objects, title, caption, logo, border or watermark. No cropping, padding, extension, stylistic remix or scene reconstruction.",
+      "site_asset": "/workspace/scratch/27c324a5d2e8/kkeep/public/wallpapers/sleepy-train-enhanced.png",
+      "original_preview": "/workspace/scratch/27c324a5d2e8/kkeep/public/wallpapers/sleepy-train-preview.jpg"
+    }
+  ]
+}

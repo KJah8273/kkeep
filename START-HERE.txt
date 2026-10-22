@@ -1,0 +1,72 @@
+KKEEP SOURCE BACKUP — MOVIES REMOVED
+
+This archive contains the actual Kkeep project source, public static assets,
+locked dependency manifest, Worker backend, migrations, tests and license files.
+Movies has been removed from the home catalog. Old /movies links redirect home.
+
+IMPORTANT: THIS IS NOT A STATIC-ONLY WEBSITE
+Do not upload this ZIP to a static Pages upload and expect the proxy to work.
+Kkeep needs its Cloudflare Worker for HTTP/WebSocket relay and server-rendered
+routes. Profiles, synchronized data and saves need a D1 database. Several game
+assets and uploaded wallpapers are stored in R2, outside this source archive.
+
+LOCAL BUILD
+Use Linux or Windows WSL with Node.js 24, npm, bash, curl and GNU timeout.
+Extract the archive, enter the kkeep directory and run:
+  npm run install:ci
+  npm run build
+  npm run test:all
+The build creates dist/client (static assets) and dist/server (Worker output).
+The original source is in app/, components/, lib/, worker/ and public/.
+
+CLOUDFLARE MIGRATION CHECKLIST
+The included vite.config.ts is the current Sites build configuration, not a
+ready-to-deploy configuration for your own Cloudflare account. It uses local
+placeholder database settings. Before deploying on your account:
+1. Configure your own Worker name, D1 DB binding, R2 GAME_ASSETS binding, and
+   static ASSETS binding. Replace the placeholder database ID and bucket name.
+2. Apply the SQL migrations from drizzle/ to your own database.
+3. Transfer needed R2 game objects and wallpaper uploads separately.
+4. Configure any needed runtime secrets privately. No secrets are included.
+5. Review Sites-specific authentication (including owner analytics) for your
+   own hosting environment and verify it before enabling those features.
+6. Deploy and test HTTPS proxy routes, WebSockets, service workers, profiles,
+   games and provider sign-in. Connecting a custom domain changes the origin:
+   existing browser-local saves and logins do not automatically migrate.
+
+NOT INCLUDED
+Installed node_modules, Git history, generated builds, runtime credentials,
+production D1 data, R2 objects, user accounts, cookies and device-local saves.
+This is a SOURCE backup, not a backup of every player's data.
+
+PRESERVED
+Existing source licenses and third-party attribution are retained. The public
+Source ZIP link remains removed. This archive is for the owner to download.
+
+VERIFICATION
+TypeScript check and all 256 automated tests passed after Movies was removed.
+This export has not been deployed or verified on your separate Cloudflare
+account. Some older README/docs sections describe retired features; actual
+source and this export note take precedence for the current package.
+
+AUTOMATIC UPDATES FOR BOTH HOSTS — NOT CONNECTED YET
+Cloudflare Workers Builds can deploy from a private GitHub or GitLab repository
+when changes are pushed to the selected production branch. A ZIP is only a
+snapshot and does not establish automatic updates.
+
+To keep both Sites and your own Cloudflare deployment updated, establish a
+release workflow that publishes the same tested source revision to both hosts.
+ChatGPT Sites currently uses its own managed source repository; creating a new
+GitHub repository does not automatically connect or mirror that repository.
+Future edits here must also be pushed to your authorized private GitHub repo,
+or an explicitly configured CI workflow must perform that synchronization.
+Do not make the source public or paste access tokens into chat.
+
+Needed to finish setup: your private repository, Cloudflare Worker name,
+configured D1/R2 resources, and securely authorized deployment access.
+Code deployment does not synchronize database contents, accounts, or saves.
+Those need a separate migration/shared-backend plan. No automatic sync has
+been configured or tested in this export.
+
+Official setup guide:
+https://developers.cloudflare.com/workers/ci-cd/builds/

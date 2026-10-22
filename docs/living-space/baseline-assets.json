@@ -1,0 +1,52 @@
+[
+  {
+    "file": "framework-CXnKph_e.js",
+    "bytes": 189805,
+    "gzip": 59029
+  },
+  {
+    "file": "hgola-player-upIfjYAB.js",
+    "bytes": 1906,
+    "gzip": 1020
+  },
+  {
+    "file": "index-CH35RDMU.js",
+    "bytes": 81666,
+    "gzip": 24645
+  },
+  {
+    "file": "index-DSVZi4U1.css",
+    "bytes": 170575,
+    "gzip": 26497
+  },
+  {
+    "file": "layout-segment-context-BOf--z7_.js",
+    "bytes": 288,
+    "gzip": 228
+  },
+  {
+    "file": "proxy-browser-BfbiL7AD.js",
+    "bytes": 204178,
+    "gzip": 61502
+  },
+  {
+    "file": "query-BbOc3VB2.js",
+    "bytes": 1564,
+    "gzip": 776
+  },
+  {
+    "file": "rolldown-runtime-S-ySWqyJ.js",
+    "bytes": 694,
+    "gzip": 422
+  },
+  {
+    "file": "router-Dud1zjFE.js",
+    "bytes": 9065,
+    "gzip": 3068
+  },
+  {
+    "file": "stick-fight-player-ZoHnkDgh.js",
+    "bytes": 1762,
+    "gzip": 923
+  }
+]
