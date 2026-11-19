@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 300" role="img" aria-label="test target game">
+  <defs>
+    <radialGradient id="background"><stop stop-color="#19313d"/><stop offset="1" stop-color="#0d141e"/></radialGradient>
+  </defs>
+  <rect width="480" height="300" rx="28" fill="url(#background)"/>
+  <circle cx="240" cy="130" r="70" fill="#42d8e9" opacity=".08"/>
+  <circle cx="240" cy="130" r="55" fill="#42d8e9" stroke="#bbfaff" stroke-width="3"/>
+  <circle cx="240" cy="130" r="18" fill="none" stroke="#061417" stroke-width="5"/>
+  <text x="240" y="244" text-anchor="middle" fill="#f3f7fc" font-family="system-ui,-apple-system,sans-serif" font-size="42" font-weight="750" letter-spacing="-1">test</text>
+</svg>

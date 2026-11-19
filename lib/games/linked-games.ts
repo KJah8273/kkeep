@@ -8,6 +8,7 @@ export type LinkedGame = {
 
 // Game-only players stay inside Kkeep. Do not add outside-page fallbacks.
 export const linkedGames: readonly LinkedGame[] = [
+  {slug:'test',name:'test',url:'/games/test/index.html',cover:'/games/covers/test.svg'},
   {slug:'blumgi-paintball',name:'Blumgi Paintball',url:'https://geometrydashlite.online/blumgi-paintball.embed',cover:'/games/covers/blumgi-paintball.png'},
   {slug:'stickman-hook',name:'Stickman Hook',url:'https://stickman-unblocked.github.io/game/',cover:'/games/covers/stickman-hook.webp'},
   {slug:'drive-mad',name:'Drive Mad',url:'https://drivegame.io/play/drive-mad/',cover:'/games/covers/drive-mad.jpg'},
