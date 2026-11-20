@@ -1,0 +1,12 @@
+<!doctype html><html lang="en"><head><script>(function(){var sw=navigator.serviceWorker;if(!sw){document.documentElement.innerHTML="This needs service workers.";return}var base="/_jar/sw.js",stg=false,ss=window.sessionStorage;try{stg=ss.getItem("rbxweb.appPath")==="/_rbx/app-staging/"}catch(e){}var want=stg?base+(base.indexOf("?")<0?"?":"&")+"stg=1":base,c=sw.controller;if(c){if(/[?&]stg=1(&|$)/.test(c.scriptURL)===stg)return;try{if(Date.now()-Number(ss.getItem("rbxweb.swSwap")||0)<20000)return;ss.setItem("rbxweb.swSwap",String(Date.now()))}catch(e){return}}window.stop();var go=function(){location.reload()};if(c){sw.addEventListener("controllerchange",go);setTimeout(go,8000)}sw.register(want,{scope:"/"}).then(function(){return sw.ready}).then(function(){if(!c)go()},function(e){document.documentElement.innerHTML="Roblox couldn't start: "+e})})()</script><script>window.__RBX_JAR__=true;window.__RBX_API__="/_rbx/api"</script><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Play</title>
+<link rel="preconnect" href="https://tr.rbxcdn.com" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@500&display=swap">
+<link rel="stylesheet" href="app.css">
+</head><body>
+<script>if (window.top === window) document.body.classList.add("standalone");</script>
+<main class="page" id="page" aria-live="polite"></main>
+<script src="app.js"></script>
+</body></html>

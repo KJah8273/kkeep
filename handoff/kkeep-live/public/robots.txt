@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /browse/
+Disallow: /gfn/browse/
+Disallow: /xbox/browse/
+
+Sitemap: https://kkeep.fun/sitemap.xml

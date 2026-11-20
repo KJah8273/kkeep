@@ -1,0 +1,50 @@
+/* TikTok's real feed sits inside this touch-first shell. Account pages keep the native viewport. */
+.tiktok-player{--tiktok-nav-height:calc(78px + env(safe-area-inset-bottom,0px));background:#000;font-family:Arial,Helvetica,system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+.tiktok-player .tiktok-mount>iframe{background:#000}
+.tiktok-app-mode .tiktok-mount{bottom:var(--tiktok-nav-height)}
+/* The feed viewport must stop above navigation even while a resize callback
+   still holds the former full-screen iframe dimensions. Native dialogs opt out. */
+.tiktok-app-mode .tiktok-mount>iframe{width:100%!important;height:100%!important;transform:none!important}
+.tiktok-player button{font-size:16px}
+.tiktok-player .tiktok-app-header{position:absolute;z-index:24;inset:0 0 auto;display:grid;grid-template-columns:1fr auto 1fr;align-items:start;gap:12px;padding:calc(12px + env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) 38px max(14px,env(safe-area-inset-left,0px));background:linear-gradient(#0008,#0000);pointer-events:none}
+.tiktok-app-header button,.tiktok-app-header a{pointer-events:auto}
+.tiktok-header-start,.tiktok-header-end{display:flex;align-items:center;gap:8px}
+.tiktok-header-end{justify-content:flex-end}
+.tiktok-player .tiktok-icon-button,.tiktok-player .tiktok-options-button{display:inline-flex;justify-content:center;align-items:center;min-width:44px;min-height:44px;width:44px;height:44px;padding:8px;color:#fff;border:0;background:transparent;text-decoration:none;border-radius:50%;filter:drop-shadow(0 1px 3px #0008)}
+.tiktok-icon-button svg,.tiktok-options-button svg{width:28px;height:28px;flex:none}
+.tiktok-player .tiktok-live-button{width:48px}
+.tiktok-player .tiktok-live-button svg{width:31px;height:31px}
+.tiktok-feed-tabs{display:flex;align-items:center;gap:clamp(16px,3vw,42px)}
+.tiktok-player .tiktok-feed-tabs button{position:relative;padding:5px 0 12px;min-height:44px;background:none;border-radius:0;color:#c6c6c6;font-size:clamp(19px,2.2vw,27px);font-weight:750;text-shadow:0 1px 4px #0008;white-space:nowrap}
+.tiktok-player .tiktok-feed-tabs button[aria-current=page]{color:#fff}
+.tiktok-feed-tabs button[aria-current=page]::after{content:"";position:absolute;width:36px;height:3px;left:calc(50% - 18px);bottom:1px;background:#fff;border-radius:2px}
+.tiktok-player .tiktok-app-navigation{position:absolute;z-index:24;inset:auto 0 0;box-sizing:border-box;height:var(--tiktok-nav-height);min-height:var(--tiktok-nav-height);padding:7px max(10px,env(safe-area-inset-right,0px)) calc(7px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));display:grid;grid-template-columns:repeat(5,1fr);align-items:center;border-top:1px solid #ffffff22;background:#000}
+.tiktok-player .tiktok-app-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:54px;min-width:0;padding:2px 6px;color:#e7e7e7;background:transparent;font-size:clamp(14px,1.5vw,18px);line-height:1.2;font-weight:500;border-radius:8px}
+.tiktok-tab-icon{display:flex;align-items:center;justify-content:center;width:32px;height:30px}
+.tiktok-tab-icon svg{width:28px;height:28px}
+.tiktok-player .tiktok-app-tab[aria-current=page]{color:#fff;font-weight:650}
+.tiktok-app-tab[aria-current=page] .tiktok-tab-icon svg{fill:currentColor;stroke-width:1.7}
+.tiktok-player .tiktok-app-tab[aria-disabled=true],.tiktok-player .tiktok-icon-button[aria-disabled=true],.tiktok-player .tiktok-feed-tabs button[aria-disabled=true]{opacity:.45}
+.tiktok-player .tiktok-create-tab{opacity:1}
+.tiktok-create-tab .tiktok-tab-icon{position:relative;width:46px;height:31px;border-radius:8px;background:#fff;color:#050505;box-shadow:-5px 0 #25f4ee,5px 0 #fe2c55}
+.tiktok-create-tab svg{width:24px;height:24px;stroke-width:2.7}
+.tiktok-player .tiktok-native-toolbar{position:absolute;z-index:24;left:0;right:0;top:max(10px,env(safe-area-inset-top));display:flex;justify-content:space-between;align-items:center;padding:0 12px;pointer-events:none}
+.tiktok-native-toolbar>a,.tiktok-native-toolbar>button{pointer-events:auto}
+.tiktok-player .tiktok-native-toolbar .tiktok-home{position:static;display:inline-flex;min-height:40px;padding:5px 12px;font-size:14px;background:#101014e8;border:1px solid #ffffff22;border-radius:12px}
+.tiktok-player .tiktok-native-toolbar .tiktok-options-button{background:#101014e8;border:1px solid #ffffff22}
+.tiktok-player .tiktok-options{position:absolute;z-index:35;right:max(14px,env(safe-area-inset-right));top:calc(65px + env(safe-area-inset-top));width:220px;padding:7px;background:#18181cf5;border:1px solid #ffffff25;border-radius:16px;box-shadow:0 12px 42px #0009;backdrop-filter:blur(18px)}
+.tiktok-player .tiktok-options button{display:block;width:100%;text-align:left;padding:10px 14px;background:transparent;font-weight:500}
+.tiktok-player .tiktok-options button:hover{background:#ffffff12}
+.tiktok-player .tiktok-options button+button{margin-top:2px}
+.tiktok-player .tiktok-notice{z-index:40;top:calc(76px + env(safe-area-inset-top));font-size:15px;background:#202025f5;border-color:#ffffff2c;color:#f5f5f5}
+.tiktok-player .tiktok-loading{z-index:28;gap:17px;background:#000}
+.tiktok-player .tiktok-loading img{width:44px;height:44px}
+.tiktok-player .tiktok-loading strong{font-size:22px}
+.tiktok-player .tiktok-loading span{font-size:16px;color:#a7a7ad}
+.tiktok-player .tiktok-error{z-index:30;background:#08080bf5}
+.tiktok-player .tiktok-error button{min-width:160px;background:#fe2c55;color:#fff}
+.tiktok-player .tiktok-error button:last-child{background:#ffffff12}
+.tiktok-player button:focus-visible,.tiktok-player a:focus-visible{outline:3px solid #25f4ee;outline-offset:3px}
+.tiktok-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+@media(max-width:600px){.tiktok-player{--tiktok-nav-height:calc(72px + env(safe-area-inset-bottom,0px))}.tiktok-player .tiktok-app-header{gap:4px;padding-left:8px;padding-right:8px}.tiktok-header-start,.tiktok-header-end{gap:0}.tiktok-player .tiktok-live-button{display:none}.tiktok-player .tiktok-icon-button{width:40px;min-width:40px;padding:8px}.tiktok-icon-button svg{width:25px;height:25px}.tiktok-feed-tabs{gap:17px}.tiktok-player .tiktok-feed-tabs button{font-size:18px}.tiktok-player .tiktok-app-tab{font-size:13px;gap:4px;min-height:50px}.tiktok-app-tab .tiktok-tab-icon svg{width:25px;height:25px}.tiktok-player .tiktok-notice{left:10px;right:10px;max-width:none}}
+@media(prefers-reduced-motion:reduce){.tiktok-player *{scroll-behavior:auto!important}}

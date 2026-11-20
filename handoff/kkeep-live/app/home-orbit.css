@@ -1,0 +1,182 @@
+/* Kkeep's orbital night: local game art around a quiet, readable centre. */
+.home-orbit {
+  position:absolute;
+  inset:0;
+  z-index:0;
+  overflow:hidden;
+  pointer-events:none;
+  user-select:none;
+  contain:paint;
+  background:radial-gradient(ellipse at 0% 45%,#0d1420 0%,transparent 52%),radial-gradient(ellipse at 100% 30%,#10101c 0%,transparent 48%),#020305;
+}
+.home-orbit-glow {
+  position:absolute;
+  width:70%;
+  height:84%;
+  opacity:.74;
+  animation:home-orbit-breathe 18s ease-in-out infinite alternate;
+}
+.home-orbit-glow-blue {
+  left:-32%;
+  top:14%;
+  background:radial-gradient(ellipse,#27487559 0%,#1839581f 42%,transparent 70%);
+}
+.home-orbit-glow-violet {
+  right:-35%;
+  top:-10%;
+  background:radial-gradient(ellipse,#35356045 0%,#25254520 42%,transparent 70%);
+  animation-delay:-9s;
+  animation-duration:24s;
+}
+.home-orbit-ring {
+  position:absolute;
+  border:1px solid #b6d6ff27;
+  border-radius:50%;
+  box-shadow:inset 0 0 32px #779bcc03,0 0 30px #779bcc03;
+  transform-origin:center;
+}
+.home-orbit-ring::after {
+  content:'';
+  position:absolute;
+  inset:10px;
+  border:1px solid #a6caff09;
+  border-radius:inherit;
+}
+.home-orbit-ring-near {
+  left:-14%;
+  top:8%;
+  width:130%;
+  height:73%;
+  transform:rotate(-23deg);
+  animation:home-orbit-turn-near 32s ease-in-out infinite alternate;
+}
+.home-orbit-ring-far {
+  left:-8%;
+  top:8%;
+  width:118%;
+  height:86%;
+  border-color:#a9b5dc15;
+  transform:rotate(24deg);
+  animation:home-orbit-turn-far 40s ease-in-out infinite alternate;
+  animation-delay:-18s;
+}
+.home-orbit-stars {
+  position:absolute;
+  inset:0;
+  opacity:.55;
+  background-image:radial-gradient(circle at 19% 16%,#c6d9fa 0 1px,transparent 1.5px),radial-gradient(circle at 84% 38%,#c6d9fa 0 1px,transparent 1.6px),radial-gradient(circle at 11% 81%,#c6d9fa 0 1px,transparent 1.5px),radial-gradient(circle at 73% 89%,#c6d9fa 0 1px,transparent 1.5px),radial-gradient(circle at 91% 77%,#c6d9fa 0 1px,transparent 1.5px),radial-gradient(circle at 37% 8%,#c6d9fa 0 .7px,transparent 1.3px);
+}
+.home-orbit-card {
+  --home-orbit-tilt:-12deg;
+  --home-orbit-drift:20px;
+  position:absolute;
+  width:clamp(130px,15.5vw,224px);
+  aspect-ratio:1.08;
+  opacity:.88;
+  transform:translate3d(0,0,0) rotate(var(--home-orbit-tilt));
+  animation:home-orbit-float 19s ease-in-out infinite alternate;
+}
+.home-orbit-card-frame {
+  position:absolute;
+  inset:0;
+  overflow:hidden;
+  border:1px solid #c8e0ff29;
+  border-radius:20px;
+  background:#10141c;
+  box-shadow:0 20px 55px #0009,inset 0 1px #ffffff1a;
+}
+.home-orbit .home-orbit-card-frame img {
+  display:block;
+  width:100%;
+  height:100%;
+  max-width:none;
+  object-fit:cover;
+  opacity:.84;
+}
+.home-orbit-card-frame::after {
+  content:'';
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  background:linear-gradient(150deg,#c9ddff0c,transparent 45%,#03060b55);
+  box-shadow:inset 0 0 0 1px #ffffff08;
+}
+.home-orbit-card-caption {
+  position:absolute;
+  z-index:1;
+  right:0;
+  bottom:0;
+  left:0;
+  padding:22px 12px 11px;
+  color:#d6dfeeee;
+  background:linear-gradient(transparent,#050810dd);
+  font-family:inherit;
+  font-size:10px;
+  font-weight:500;
+  line-height:1.4;
+  letter-spacing:.025em;
+  text-align:left;
+}
+.home-orbit-card-caption[dir=auto] {text-align:start;}
+.home-orbit-card-hgola {left:4.5%;top:17%;--home-orbit-tilt:-13deg;animation-delay:-4s;}
+.home-orbit-card-stick {left:-3%;top:52%;width:clamp(140px,17.5vw,252px);--home-orbit-tilt:9deg;--home-orbit-drift:-19px;animation-duration:22s;animation-delay:-11s;}
+.home-orbit-card-party {left:17%;top:79%;width:clamp(110px,12vw,174px);--home-orbit-tilt:-8deg;animation-duration:24s;animation-delay:-16s;}
+.home-orbit-card-brawl {right:5%;top:18%;--home-orbit-tilt:12deg;--home-orbit-drift:-22px;animation-duration:23s;animation-delay:-8s;}
+.home-orbit-card-roblox {right:-2%;top:53%;width:clamp(130px,16vw,230px);--home-orbit-tilt:-12deg;animation-duration:21s;animation-delay:-14s;}
+.home-orbit-card-blumgi {right:16%;top:80%;width:clamp(106px,12vw,173px);--home-orbit-tilt:11deg;--home-orbit-drift:-15px;animation-duration:26s;animation-delay:-6s;}
+.home-orbit-shade {
+  position:absolute;
+  inset:0;
+  background:radial-gradient(ellipse 40% 58% at 50% 45%,#020305ed 0%,#020305c2 42%,#0203053d 73%,transparent 100%),linear-gradient(180deg,#0005 0%,transparent 19%,transparent 68%,#0008 88%,#000 100%);
+  box-shadow:inset 0 0 90px #0005;
+}
+.home-orbit[data-running=false] *,
+.home-orbit[data-running=false] *::before,
+.home-orbit[data-running=false] *::after {animation-play-state:paused!important;}
+@keyframes home-orbit-float {
+  from {transform:translate3d(0,-11px,0) rotate(var(--home-orbit-tilt));}
+  to {transform:translate3d(var(--home-orbit-drift),15px,0) rotate(calc(var(--home-orbit-tilt) + 4deg));}
+}
+@keyframes home-orbit-breathe {
+  from {transform:translate3d(0,0,0) scale(.94);opacity:.54;}
+  to {transform:translate3d(4%,5%,0) scale(1.06);opacity:.88;}
+}
+@keyframes home-orbit-turn-near {
+  from {transform:translate3d(0,-12px,0) rotate(-23deg);}
+  to {transform:translate3d(0,17px,0) rotate(-18deg);}
+}
+@keyframes home-orbit-turn-far {
+  from {transform:translate3d(0,10px,0) rotate(24deg);}
+  to {transform:translate3d(0,-15px,0) rotate(18deg);}
+}
+@media (max-width:1000px) {
+  .home-orbit-card {width:clamp(116px,17vw,170px);}
+  .home-orbit-card-hgola {left:1%;top:16%;}
+  .home-orbit-card-brawl {right:0;top:17%;}
+  .home-orbit-card-stick {left:-7%;top:57%;width:clamp(130px,19vw,185px);}
+  .home-orbit-card-roblox {right:-5%;top:56%;width:clamp(126px,17vw,170px);}
+  .home-orbit-card-party {left:9%;top:82%;width:clamp(100px,13vw,130px);}
+  .home-orbit-card-blumgi {right:8%;top:82%;width:clamp(100px,13vw,130px);}
+  .home-orbit-shade {background:radial-gradient(ellipse 44% 53% at 50% 47%,#020305f2 0%,#020305c4 43%,#02030542 78%,transparent 100%),linear-gradient(180deg,#0005,transparent 25%,transparent 65%,#000 100%);}
+}
+@media (max-width:560px) {
+  .home-orbit-glow {width:110%;}
+  .home-orbit-glow-blue {left:-65%;}
+  .home-orbit-glow-violet {right:-66%;}
+  .home-orbit-card {width:106px;opacity:.68;}
+  .home-orbit-card-frame {border-radius:15px;}
+  .home-orbit-card-caption {font-size:8px;padding:18px 8px 8px;}
+  .home-orbit-card-hgola {left:-6%;top:17%;}
+  .home-orbit-card-brawl {right:-8%;top:18%;}
+  .home-orbit-card-stick {left:-14%;top:63%;width:118px;}
+  .home-orbit-card-roblox {right:-13%;top:65%;width:112px;}
+  .home-orbit-card-party,.home-orbit-card-blumgi {display:none;}
+  .home-orbit-ring-near {left:-42%;top:18%;width:184%;height:60%;}
+  .home-orbit-ring-far {left:-47%;top:12%;width:190%;height:73%;}
+  .home-orbit-shade {background:radial-gradient(ellipse 65% 45% at 50% 46%,#020305ee 0%,#020305c9 44%,#02030540 80%,transparent 100%),linear-gradient(180deg,#0005,transparent 24%,transparent 65%,#000 100%);}
+}
+@media (prefers-reduced-motion:reduce) {
+  .home-orbit[data-motion=auto] *,
+  .home-orbit[data-motion=auto] *::before,
+  .home-orbit[data-motion=auto] *::after {animation-play-state:paused!important;}
+}

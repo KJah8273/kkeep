@@ -1,0 +1,52 @@
+<!doctype html><meta charset="utf-8"><title>Hill input browser check</title>
+<script src="/games/ipad-imports/assets/hill-input.js"></script>
+<script>
+// Manual browser harness: copy to public/_hill-input-check.html for local QA,
+// remove before building. document.open matches the production loader's swap.
+const beforeSwap = window.KkeepHcrInput;
+document.open();
+document.write('<!doctype html><title>Hill input browser check</title><style>body{font:18px system-ui;background:#171c23;color:white;padding:24px}button{font:inherit;padding:16px}canvas{display:block;width:640px;height:480px;max-width:90vw;object-fit:contain;touch-action:none;background:#253843;margin-top:24px}pre{white-space:pre-wrap}</style><h1>Hill input browser check</h1><button id="run">Run input checks</button><pre id="result">Ready</pre><canvas id="canvas" width="1280" height="720" tabindex="0"></canvas><p id="manual">Click the canvas to check real mouse delivery.</p>');
+document.close();
+const canvas=document.getElementById('canvas'), result=document.getElementById('result');
+const calls=[];
+// Exercise Safari's native TouchEvents branch even on a mouse-only QA desktop.
+if (!('ontouchstart' in window)) Object.defineProperty(window,'ontouchstart',{value:null,configurable:true});
+const position=e=>{const r=canvas.getBoundingClientRect(),scale=Math.min(r.width/1280,r.height/720);return [Math.round((e.clientX-r.left-(r.width-1280*scale)/2)/scale),Math.round((e.clientY-r.top-(r.height-720*scale)/2)/scale)];};
+window.KkeepHcrInput.attach(canvas,{position,ready:()=>true,emit:(...args)=>{
+  calls.push(args);
+  if(args[0]==='hcr_ev_mouse'&&args[1]===2)document.getElementById('manual').textContent='PASS: real mouse press and release received at '+args[2]+','+args[3];
+}});
+document.getElementById('run').onclick=()=>{
+  const checks=[];
+  const assert=(condition,name)=>{if(!condition)throw Error(name);checks.push('PASS: '+name);};
+  const points=[{identifier:84,x:1100,y:620},{identifier:99,x:180,y:620}];
+  const finger=p=>{const r=canvas.getBoundingClientRect(),s=Math.min(r.width/1280,r.height/720);return new Touch({identifier:p.identifier,target:canvas,clientX:r.left+(r.width-1280*s)/2+p.x*s,clientY:r.top+(r.height-720*s)/2+p.y*s});};
+  let active=[];
+  const touch=(type,changed)=>{
+    if(type==='touchstart')active.push(...changed);
+    if(type==='touchend'||type==='touchcancel')active=active.filter(p=>!changed.includes(p));
+    const e=new TouchEvent(type,{bubbles:true,cancelable:true,changedTouches:changed.map(finger),touches:active.map(finger),targetTouches:active.map(finger)});
+    canvas.dispatchEvent(e);return e.defaultPrevented;
+  };
+  const touches=()=>calls.filter(c=>c[0]==='hcr_ev_touch');
+  try {
+    calls.length=0;
+    assert(window.KkeepHcrInput===beforeSwap,'adapter survives the game document swap');
+    assert(touch('touchstart',[points[0]]),'native touchstart prevents browser gestures');
+    assert(JSON.stringify(touches()[0])===JSON.stringify(['hcr_ev_touch',0,2,1100,620]),'gas coordinates match the letterboxed canvas');
+    touch('touchstart',[points[1]]);touch('touchend',[points[1]]);
+    assert(JSON.stringify(touches().map(c=>[c[1],c[2]]))===JSON.stringify([[0,2],[0,3],[2,3]]),'second finger releases without releasing gas');
+    canvas.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerType:'touch',pointerId:84}));
+    assert(touches().length===3,'duplicate pointer events do not release native touch');
+    touch('touchcancel',[points[0]]);
+    assert(touches().at(-1)[1]===2,'touchcancel bubbles to the window release handler');
+    touch('touchstart',points);window.dispatchEvent(new Event('blur'));
+    assert(touches().slice(-2).every(c=>c[1]===2),'focus loss releases both held pedals');
+    const count=touches().length;touch('touchend',points);
+    assert(touches().length===count,'late release after focus loss is ignored');
+    touch('touchstart',[points[0]]);touch('touchend',[points[0]]);
+    assert(touches().at(-1)[1]===2&&document.activeElement===canvas,'next touch restores focus and responds');
+    result.textContent=checks.join('\n')+'\nAll browser input checks passed.';
+  } catch(error) {result.textContent=checks.join('\n')+'\nFAIL: '+error.message;console.error(error);}
+};
+</script>

@@ -1,0 +1,281 @@
+<!doctype html><script>window.__JAR_SW__="/_jar/sw.js";window.__JAR_WISP__=""</script>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sign in</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0b0c; color: #fff; font: 14px Inter, system-ui, sans-serif; }
+  #frame { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; }
+  #loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #0b0b0c; transition: opacity .2s ease; }
+  #loading.done { opacity: 0; pointer-events: none; }
+  .spin { width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(255,255,255,.15); border-top-color: #fff; animation: spin .8s linear infinite; }
+  #loading p { margin: 0; color: rgba(255,255,255,.6); font-size: 13px; }
+  #loading p.err { color: #ff8a8a; max-width: 360px; text-align: center; line-height: 1.5; }
+  #signing { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #0b0b0c; }
+  #signing.on { display: flex; }
+  #signing p { margin: 0; color: rgba(255,255,255,.6); font-size: 13px; text-align: center; max-width: 360px; line-height: 1.5; }
+  #signing button { background: #fff; color: #000; border: 0; border-radius: 8px; padding: 8px 16px; font: inherit; cursor: pointer; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<iframe id="frame" title="Sign in"></iframe>
+<div id="signing" role="status"><div class="spin"></div><p id="smsg">Signing you in…</p></div>
+<div id="loading" role="status"><div class="spin"></div><p id="msg">Loading sign-in…</p></div>
+
+<script src="/scramjet/scramjet.js"></script>
+<script src="/controller/controller.api.js"></script>
+<script type="module">
+  // The sign-in, on the Roblox host (served by the engine at /_rbx/signin).
+  // Roblox's own login runs through Scramjet in the frame; when a session
+  // appears in Scramjet's cookie jar it goes into this origin's jar (IndexedDB
+  // "rbxjar", read by the jar worker). Nothing is sent to a server.
+  import { Controller } from "/controller/controller-external.mjs";
+  import { defaultConfigDev } from "/scramjet/scramjet-external.mjs";
+  import EpoxyClient from "/epoxy/index.mjs";
+
+  const $ = (id) => document.getElementById(id);
+  const embedded = window.top !== window;
+  // Sign-in steps for the server log (DIAG signin), 2026-11-18: only ~6% of
+  // visitors who see this page end up signed in, and all of it runs in the
+  // browser, so this is the only way to see where they stop. One random id
+  // per page load ties the steps together; no names, passwords or codes.
+  const SID = Math.random().toString(36).slice(2, 10);
+  const T0 = Date.now();
+  const sent = new Set();
+  const step = (what, once = true) => {
+    if (once && sent.has(what)) return;
+    sent.add(what);
+    try { fetch("/_diag?k=signin&m=" + encodeURIComponent(`${SID} +${Math.round((Date.now() - T0) / 1000)}s ${what}`), { method: "POST", keepalive: true }); } catch { /* ignore */ }
+  };
+  step("open" + (embedded ? " embedded" : ""));
+  const fail = (m) => { step("fail: " + m); $("msg").textContent = m; $("msg").className = "err"; document.querySelector(".spin").style.display = "none"; };
+
+  // ---- the jar (same origin: write it directly) ----
+  function db(name, store) {
+    return new Promise((resolve, reject) => {
+      const r = indexedDB.open(name, 1);
+      r.onupgradeneeded = () => { if (store) r.result.createObjectStore(store); else r.transaction.abort(); };
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+    });
+  }
+  async function kv(op, key, value) {
+    const d = await db("rbxjar", "kv");
+    return new Promise((resolve, reject) => {
+      const t = d.transaction("kv", op === "get" ? "readonly" : "readwrite");
+      const s = t.objectStore("kv");
+      const r = op === "get" ? s.get(key) : op === "del" ? s.delete(key) : s.put(value, key);
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+    });
+  }
+  const tellSw = () => navigator.serviceWorker.controller?.postMessage({ type: "jar-changed" });
+  // true / false (Roblox answered: signed out) / null (couldn't reach Roblox:
+  // the answer isn't known, so it's retried rather than called a failure).
+  async function signedIn() {
+    const r = await fetch("/_rbx/api/session", { cache: "no-store" }).catch(() => null);
+    if (!r || !r.ok) return null;
+    const j = await r.json().catch(() => null);
+    return j ? !!j.loggedIn : null;
+  }
+  async function signedInSure() {
+    let v = await signedIn();
+    for (let i = 0; i < 4 && v === null; i++) {
+      await new Promise((ok) => setTimeout(ok, 1200 * (i + 1)));
+      v = await signedIn();
+    }
+    return v;
+  }
+  function done() {
+    if (embedded) parent.postMessage({ type: "webblox:signed-in" }, "*");
+    location.replace(/[?&]stage=1(&|$)/.test(location.search) ? "/_rbx/app-staging/" : "/_rbx/app/");
+  }
+
+  // While the player signs in, fetch the game engine (~28 MB) in the
+  // background, once per engine version, so their first Play doesn't start
+  // the download from zero (same as the home screen, app.js).
+  setTimeout(async () => {
+    try {
+      const c = navigator.connection;
+      if (c && (c.saveData || /2g/.test(c.effectiveType || ""))) return;
+      const { version, files } = await (await fetch("/_rbx/engine", { cache: "no-store" })).json();
+      if (!version || localStorage.getItem("rbx-engine-warm") === version) return;
+      for (const f of files) { const r = await fetch(f, { priority: "low" }); if (!r.ok) return; await r.arrayBuffer(); }
+      localStorage.setItem("rbx-engine-warm", version);
+    } catch { /* only a head start */ }
+  }, 8000);
+
+  // ---- worker first: it serves both Scramjet and the jar ----
+  try {
+    await navigator.serviceWorker.register(window.__JAR_SW__ || "/_jar/sw.js", { scope: "/" });
+    await navigator.serviceWorker.ready;
+    if (!navigator.serviceWorker.controller) { location.reload(); await new Promise(() => {}); }
+  } catch (e) { fail("Sign-in couldn't start in this browser."); throw e; }
+
+  // Already signed in here: straight to the app.
+  if ((await signedIn()) === true) { step("already signed in"); done(); await new Promise(() => {}); }
+
+  // ---- Scramjet ----
+  // Target URLs in our addresses are base64url (no "roblox" in any URL a
+  // school filter extension sees). Self-contained: these are stringified.
+  const codec = {
+    encode: (u) => {
+      if (!u) return u;
+      const b = btoa(unescape(encodeURIComponent(u)));
+      return b.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    },
+    decode: (u) => {
+      if (!u) return u;
+      try {
+        const b = u.replace(/-/g, "+").replace(/_/g, "/");
+        return decodeURIComponent(escape(atob(b + "===".slice((b.length + 3) % 4))));
+      } catch (e) { return u; }
+    },
+  };
+  // Which relay the sign-in goes through (2026-11-18, compared in DIAG signin):
+  //  "front"   /_rbx/wisp/    wisp-front (healthy Roblox servers, retries hung
+  //                           connections) -> main relay -> Cloudflare WARP
+  //  "mullvad" /_rbx/wisp-si/ sign-in-only relay, one stable Mullvad address
+  // Half of browsers each, kept per browser; ?siroute=front|mullvad picks one.
+  // The old default (this origin's /wisp/: main relay, no front) is gone: it
+  // was why a third of sign-in pages never loaded.
+  const ROUTE_KEY = "rbxweb.siroute";
+  let route = new URLSearchParams(location.search).get("siroute");
+  try {
+    if (/^(front|mullvad)$/.test(route || "")) localStorage.setItem(ROUTE_KEY, route);
+    route = localStorage.getItem(ROUTE_KEY);
+    if (!/^(front|mullvad)$/.test(route || "")) { route = Math.random() < 0.5 ? "front" : "mullvad"; localStorage.setItem(ROUTE_KEY, route); }
+  } catch { route = route === "mullvad" ? "mullvad" : "front"; }
+  step("route " + route);
+  const wsBase = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
+  const wispUrl = window.__JAR_WISP__ || (route === "mullvad" ? `${wsBase}/_rbx/wisp-si/` : `${wsBase}/_rbx/wisp/`);
+  // The Mullvad route is the experiment: if Roblox's page hasn't loaded in
+  // 30 s, this browser goes back to the front route and reloads.
+  if (route === "mullvad") setTimeout(() => {
+    if (sent.has("login page loaded")) return;
+    step("mullvad route slow, back to front");
+    try { localStorage.setItem(ROUTE_KEY, "front"); } catch { /* storage blocked */ }
+    location.reload();
+  }, 30000);
+  let frame, controller;
+  try {
+    controller = new Controller({
+      serviceworker: navigator.serviceWorker.controller,
+      transport: new EpoxyClient({ wisp: wispUrl }),
+      config: { codec },
+      scramjetConfig: { ...defaultConfigDev, flags: { ...defaultConfigDev.flags, cleanErrors: true, captureErrors: false } },
+    });
+    await controller.wait();
+    frame = controller.createFrame($("frame"), {});
+  } catch (e) { fail("Couldn't load the sign-in. Try again in a moment."); throw e; }
+  $("frame").addEventListener("load", () => { $("loading").classList.add("done"); step("login page loaded"); }, { once: true });
+  // What Roblox's page says, matched against known messages (the frame and
+  // the frames inside it are same-origin through Scramjet).
+  const SIGNS = [
+    ["too many attempts", /too many attempts|try again later|rate limit/i],
+    ["wrong password", /incorrect (username|password)|password is incorrect/i],
+    ["verification server", /verification server|cannot connect|can't connect|couldn.t connect/i],
+    ["update browser", /update your browser|browser is not supported/i],
+    ["something went wrong", /something went wrong|unknown error|an error occurred/i],
+    ["puzzle", /start puzzle|verify you.re human|verification|security check/i],
+    ["code step", /enter the code|one-time code|code sent|check your email/i],
+    ["account locked", /account (has been |is )?(locked|banned|suspended|deleted)|moderated/i],
+    ["2-step", /2-step verification|authenticator/i],
+  ];
+  const textOf = (doc, depth = 0) => {
+    let t = "";
+    try { t = doc.body ? doc.body.innerText || "" : ""; } catch { return ""; }
+    if (depth < 3) for (const f of doc.querySelectorAll("iframe")) { try { if (f.contentDocument) t += "\n" + textOf(f.contentDocument, depth + 1); } catch { /* cross-origin */ } }
+    return t;
+  };
+  const watch = setInterval(() => {
+    // Scramjet puts the page in a frame of its own: read every frame here.
+    let t = "";
+    for (const f of document.querySelectorAll("iframe")) { try { if (f.contentDocument) t += "\n" + textOf(f.contentDocument); } catch { /* not ours */ } }
+    if (!t) return;
+    for (const [name, re] of SIGNS) if (re.test(t)) step("shows: " + name);
+    if (Date.now() - T0 > 30 * 60 * 1000) clearInterval(watch);
+  }, 2000);
+  // Left before signing in: how far they got is the last step logged.
+  addEventListener("pagehide", () => step("left", false));
+  setTimeout(() => $("loading").classList.add("done"), 45000);
+  frame.go("https://www.roblox.com/login");
+
+  // ---- capture: Scramjet's cookie jar -> our jar ----
+  const pick = (jar) => {
+    for (const c of Object.values(jar || {})) {
+      if (!c || c.name !== ".ROBLOSECURITY") continue;
+      const dom = String(c.domain || "").replace(/^\./, "").toLowerCase();
+      if (dom && !dom.endsWith("roblox.com")) continue;
+      if (typeof c.value === "string" && c.value.length >= 100) return c.value;
+    }
+    return null;
+  };
+  function memToken() {
+    try { return pick(JSON.parse(controller.cookieJar.dump())); } catch { return null; }
+  }
+  async function scramjetToken() {
+    const m = memToken();
+    if (m) return m;
+    let d;
+    try { d = await db("__scramjet_controller"); } catch { return null; }
+    try {
+      if (!d.objectStoreNames.contains("state")) return null;
+      const state = await new Promise((resolve, reject) => {
+        const g = d.transaction("state", "readonly").objectStore("state").get("cookies");
+        g.onsuccess = () => resolve(g.result); g.onerror = () => reject(g.error);
+      });
+      const jar = state && typeof state.cookies === "string" ? JSON.parse(state.cookies) : {};
+      for (const c of Object.values(jar)) {
+        if (!c || c.name !== ".ROBLOSECURITY") continue;
+        const dom = String(c.domain || "").replace(/^\./, "").toLowerCase();
+        if (dom && !dom.endsWith("roblox.com")) continue;
+        if (typeof c.value === "string" && c.value.length >= 100) return c.value;
+      }
+      return null;
+    } finally { d.close(); }
+  }
+  function showSigning(msg, retry) {
+    $("signing").classList.add("on");
+    $("smsg").textContent = msg;
+    document.querySelector("#signing .spin").style.display = retry ? "none" : "";
+    $("signing").querySelector("button")?.remove();
+    if (retry) {
+      const b = document.createElement("button"); b.textContent = "Try again";
+      b.onclick = () => { rejected = null; showSigning("Signing you in…"); };
+      $("signing").appendChild(b);
+    }
+  }
+  let rejected = null, busy = false;
+  setInterval(async () => {
+    if (busy) return;
+    busy = true;
+    try {
+      const token = await scramjetToken();
+      if (!token || token === rejected) return;
+      showSigning("Signing you in…");
+      step("session captured");
+      const prev = await kv("get", "token");
+      if (token !== prev) { await kv("put", "token", token); tellSw(); }
+      const ok = await signedInSure();
+      if (ok) { step("signed in"); done(); return; }
+      // Not a working session (or Roblox couldn't be reached): keep what we had.
+      if (prev) await kv("put", "token", prev); else await kv("del", "token");
+      tellSw();
+      step(ok === null ? "session check unreachable" : "session rejected");
+      if (ok === null) {
+        // Don't blame the session: it may be fine, the connection wasn't.
+        rejected = token;
+        setTimeout(() => { if (rejected === token) rejected = null; }, 8000);   // tries again by itself
+        showSigning("Roblox signed you in, but we couldn't reach it to finish. Trying again…", true);
+      } else {
+        rejected = token;
+        showSigning("Roblox signed you in, but we couldn't start your session here. Try again.", true);
+      }
+    } catch { /* jar not ready yet */ } finally { busy = false; }
+  }, 700);
+</script>
+</body>
+</html>

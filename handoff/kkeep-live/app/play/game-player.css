@@ -1,0 +1,20 @@
+.saved-game-page{position:fixed;inset:0;zoom:1;background:#08080c;color:#eee}.saved-game-page>iframe{position:absolute;inset:0;width:100%;height:100%;border:0}.saved-game-loading{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;background:#08080c;text-align:center;padding:25px}.saved-game-loading h1{font-size:22px}.saved-game-loading p{max-width:480px;color:#bfc0cc;font-size:14px}.saved-game-loading button,.saved-game-tools button{border:1px solid #ffffff24;background:#22232d;color:#eee;border-radius:10px;padding:11px 15px;min-height:42px;cursor:pointer}.saved-game-menu{position:fixed;left:max(10px,env(safe-area-inset-left));top:max(10px,env(safe-area-inset-top));z-index:30;font:13px system-ui}.saved-game-toggle{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;border:1px solid #ffffff30;color:#fff;background:#141419d9;font:bold 16px system-ui;cursor:pointer;box-shadow:0 2px 10px #0005}.saved-game-tools{margin-top:8px;width:min(280px,calc(100vw - 32px));max-height:calc(100dvh - 80px);overflow:auto;display:flex;flex-direction:column;gap:9px;padding:18px;border:1px solid #ffffff25;background:#13131af5;border-radius:16px;box-shadow:0 8px 40px #0009}.saved-game-tools p{display:flex;align-items:flex-start;gap:8px;line-height:1.5;margin:3px 0;color:#c9cad5}.saved-game-tools p svg{flex-shrink:0;margin-top:2px}.saved-game-tools small{color:#b4b5c4;font-size:11px;line-height:1.5}.saved-game-tools button{display:flex;align-items:center;gap:10px;text-align:left}.saved-game-tools label{display:flex;align-items:center;justify-content:space-between;gap:10px}.saved-game-tools select{padding:8px;color:#fff;background:#22232d;border:1px solid #ffffff24;border-radius:8px}.saved-game-menu button:focus-visible,.saved-game-loading button:focus-visible{outline:2px solid #a6a2ff;outline-offset:3px}
+
+.game-startup-progress {
+  width: min(280px, 70vw);
+  height: 8px;
+  accent-color: #c9baff;
+}
+
+.game-back-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 99px;
+  background: #22232d;
+  border: 1px solid #ffffff24;
+  color: #eee;
+  text-decoration: none;
+}

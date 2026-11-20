@@ -1,0 +1,26 @@
+html:has(.roblox-player),body:has(.roblox-player){margin:0;width:100%;height:100%;overflow:hidden;background:#000;color-scheme:normal;}
+.roblox-player{position:fixed;inset:0;width:100%;height:100%;height:100dvh;background:#0b0b0c;isolation:isolate;}
+/* Match the provider's normal color scheme: a mismatch makes browsers paint
+   its transparent document white, hiding the provider's white menu text. */
+.roblox-frame{position:relative;z-index:1;display:block;width:100%;height:100%;border:0;background:transparent;color-scheme:normal;transform-origin:0 0;}
+.roblox-snow{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;contain:strict;}
+.roblox-loading{z-index:2;}
+.roblox-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;padding:24px;background:#0b0b0c;color:#f5f5f5;font:16px/1.5 system-ui,sans-serif;text-align:center;}
+.roblox-loading strong{font-size:24px;}.roblox-loading p{margin:0;color:#aeb0b8;}
+.roblox-spinner{width:26px;height:26px;border:2px solid #ffffff22;border-top-color:#c8bbff;border-radius:50%;animation:roblox-spin .8s linear infinite;}
+.roblox-recovery{display:grid;justify-items:center;gap:14px;max-width:340px;}.roblox-recovery button{min-height:44px;padding:10px 28px;border:0;border-radius:12px;background:#c8bbff;color:#15121d;font:600 15px system-ui;cursor:pointer;}
+@keyframes roblox-spin{to{transform:rotate(360deg);}}@media(prefers-reduced-motion:reduce){.roblox-spinner{animation:none;}}
+.roblox-loading-cover{max-width:65vw;height:auto;border-radius:22px;}
+.roblox-help-toggle{position:absolute;z-index:3;top:max(8px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);min-height:44px;padding:8px 14px;border:1px solid #ffffff24;border-radius:24px;background:#10121be8;color:#ccd5e8;font:500 12px system-ui;cursor:pointer;}
+.roblox-recovery a{color:#c8bbff;text-underline-offset:4px;}
+.roblox-auto-notice{position:absolute;z-index:3;top:max(8px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);box-sizing:border-box;width:min(92%,520px);padding:12px 16px;border:1px solid #ffffff24;border-radius:16px;background:#10121bf2;color:#e1e5f1;font:14px/1.45 system-ui;text-align:center;box-shadow:0 8px 24px #0005;}
+.roblox-auto-notice p{margin:0 0 8px;}.roblox-auto-notice>div{display:flex;justify-content:center;gap:12px;}.roblox-auto-notice button{min-height:44px;padding:8px 14px;border:1px solid #ffffff30;border-radius:12px;background:#252035;color:#e7dfff;font:600 14px system-ui;cursor:pointer;}
+.roblox-loading{overflow:auto;box-sizing:border-box;}
+.roblox-troubleshooting{width:100%;min-width:0;box-sizing:border-box;border:1px solid #ffffff24;border-radius:12px;text-align:left;font-size:13px;}
+.roblox-troubleshooting summary{padding:12px 14px;cursor:pointer;}
+.roblox-troubleshooting-content{display:grid;gap:12px;padding:0 14px 14px;overflow-wrap:anywhere;}
+.roblox-troubleshooting dl{display:grid;gap:10px;margin:0;}.roblox-troubleshooting dt{color:#aeb0b8;}.roblox-troubleshooting dd{margin:0;color:#f5f5f5;font-variant-numeric:tabular-nums;}
+.roblox-recovery .roblox-troubleshooting button{justify-self:start;padding:8px 14px;font-size:13px;}
+.roblox-loading:has(.roblox-troubleshooting){justify-content:safe center;}
+.roblox-loading:has(.roblox-troubleshooting[open]) .roblox-loading-cover{display:none;}
+@media(max-height:520px){.roblox-loading{gap:8px;justify-content:flex-start;padding:16px;}.roblox-loading-cover{width:128px;}.roblox-recovery{gap:8px;}}

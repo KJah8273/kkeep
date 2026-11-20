@@ -1,0 +1,13 @@
+/games/*
+  Access-Control-Allow-Origin: *
+  Cross-Origin-Resource-Policy: cross-origin
+  X-Robots-Tag: noindex, follow
+
+/xbox/*
+  X-Robots-Tag: noindex, follow
+
+/recover.html
+  X-Robots-Tag: noindex, follow
+
+/hgola-runtime.html
+  X-Robots-Tag: noindex, follow

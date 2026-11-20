@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Roblox recovery UI test</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100dvh;background:#090909;color:#fff;font:18px/1.45 system-ui}main{padding:24px;max-width:800px}main p{color:#bcbcbc}button{font:inherit;cursor:pointer;padding:14px 20px;border:0;border-radius:12px;background:#c5b7ff;color:#171329}#loading-overlay{position:fixed;inset:0;display:grid;place-items:center;padding:24px;pointer-events:none}.loading-error-panel{pointer-events:auto;width:min(720px,100%);max-height:calc(100dvh - 48px);overflow:auto;padding:26px;background:#383b3c}.loading-error-panel h1{font-size:28px;text-align:center;padding-bottom:20px;border-bottom:1px solid #aaa;margin:0}#loading-error-message{padding:38px 0;text-align:center;color:#c7c7c7;overflow-wrap:anywhere}#leave{width:100%;background:#fff;color:#292929}.loading-error-panel[hidden]{display:none}.qa{position:fixed;bottom:12px;left:24px;color:#999;font-size:14px}
+</style>
+<script>
+// The fixture simulates only iPad UI selection, not Safari's rendering engine.
+Object.defineProperty(navigator,'platform',{configurable:true,value:'MacIntel'});
+Object.defineProperty(navigator,'maxTouchPoints',{configurable:true,value:5});
+window.__rbxPerf={gpu:new URL(location.href).searchParams.get('gpu')==='webgl'?'webgl':'webgpu'};
+</script>
+<script src="/kkeep-runtime.js"></script>
+</head>
+<body>
+<main><h1>Roblox recovery UI test</h1><p>This controlled test checks error reporting and the compatibility button. It does not join a Roblox game or test physical Safari.</p><p id="mode"></p><button id="test">Trigger controlled worker failure</button></main>
+<div id="loading-overlay"><section class="loading-error-panel" hidden><h1>Error</h1><div id="loading-error-message"></div><button id="leave">Leave test</button></section></div>
+<div class="qa">Development fixture · simulated iPad controls</div>
+<script>
+document.getElementById('mode').textContent='Requested graphics: '+window.__rbxPerf.gpu;
+window.onerror=()=>{document.getElementById('loading-error-message').textContent='Roblox encountered a problem. Check the console and reload.';document.querySelector('.loading-error-panel').hidden=false;};
+document.getElementById('test').onclick=()=>{
+  const url=URL.createObjectURL(new Blob(['throw new TypeError("controlled QA worker failure");'],{type:'text/javascript'}));
+  const worker=new Worker(url,{name:'em-pthread'});
+  worker.onerror=event=>{URL.revokeObjectURL(url);worker.terminate();throw event;};
+};
+document.getElementById('leave').onclick=()=>{document.querySelector('.loading-error-panel').hidden=true;};
+</script>
+</body>
+</html>

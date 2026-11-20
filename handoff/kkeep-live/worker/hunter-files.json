@@ -1,0 +1,22 @@
+{
+  "assets.bin": {
+    "offset": 2882001,
+    "size": 105433919
+  },
+  "engine.wasm": {
+    "offset": 108688380,
+    "size": 49381689
+  },
+  "images.json": {
+    "offset": 158141468,
+    "size": 10366914
+  },
+  "libAssassin.so.bin": {
+    "offset": 168511893,
+    "size": 17810248
+  },
+  "libc++_shared.so.bin": {
+    "offset": 186322141,
+    "size": 1331536
+  }
+}

@@ -1,0 +1,111 @@
+@font-face{font-family:KkeepOutfit;src:url('/fonts/Outfit-Regular.ttf') format('truetype');font-weight:400 500;font-display:swap}
+@font-face{font-family:KkeepOutfit;src:url('/fonts/Outfit-Semibold.ttf') format('truetype');font-weight:600 700;font-display:swap}
+@font-face{font-family:KkeepOutfit;src:url('/fonts/Outfit-ExtraBold.ttf') format('truetype');font-weight:800 900;font-display:swap}
+@font-face {
+  font-family: Geist;
+  src: url('/fonts/Geist-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+.kkeep-rail {
+  position: fixed;
+  z-index: 40;
+  top: max(12px, calc(env(safe-area-inset-top) + 8px));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 3px;
+  padding: 5px;
+  max-width: calc(100vw - 20px);
+  border: 1px solid #ffffff20;
+  border-radius: 21px;
+  background: #131317de;
+  backdrop-filter: blur(18px) saturate(1.25);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+  box-shadow: inset 0 1px #ffffff0f, 0 12px 32px #0006;
+  font: 500 13px/1.3 Geist, KkeepOutfit, system-ui, sans-serif;
+}
+.kkeep-rail a {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 13px;
+  border-radius: 15px;
+  color: #b3b3bd;
+  white-space: nowrap;
+  text-decoration: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .18s, background .18s;
+}
+.kkeep-rail .rail-orb {
+  display: grid;
+  place-items: center;
+}
+.kkeep-rail svg {
+  width: 17px;
+  height: 17px;
+}
+.kkeep-rail a.active {
+  background: linear-gradient(#fafafa, #dedee5);
+  color: #111116;
+  box-shadow: 0 2px 7px #0005;
+}
+.rail-selection {
+  position: absolute;
+  inset: 5px auto auto 0;
+  width: var(--rail-selection-width, 0px);
+  height: 44px;
+  transform: translateX(var(--rail-selection-x, 0px));
+  border-radius: 15px;
+  background: linear-gradient(#fafafa, #dedee5);
+  box-shadow: 0 2px 7px #0005;
+  pointer-events: none;
+  opacity: 0;
+}
+.kkeep-rail[data-selection-ready=true] .rail-selection {opacity: 1;}
+.kkeep-rail[data-selection-ready=true] a.active {background: none; box-shadow: none;}
+@media (prefers-reduced-motion: no-preference) {
+  .kkeep-rail[data-selection-moving=true] .rail-selection {
+    transition: transform .36s cubic-bezier(.2,.75,.22,1), width .36s cubic-bezier(.2,.75,.22,1);
+  }
+}
+.kkeep-rail a:focus-visible {
+  outline: 2px solid #e4e4ee;
+  outline-offset: 2px;
+}
+.kkeep-corner-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  background: #ffffff06;
+  border: 1px solid #ffffff18;
+  border-radius: 50%;
+}
+.kkeep-corner-logo img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  border-radius: 50%;
+}
+@media (hover: hover) {
+  .kkeep-rail a:not(.active):hover {background: #ffffff12; color: #fff;}
+}
+@media (max-width: 690px) {
+  .kkeep-rail a {padding-inline: 0;}
+  .kkeep-rail .rail-label {display: none;}
+  .kkeep-rail svg {width: 19px; height: 19px;}
+}
+@media (prefers-reduced-motion: reduce) {
+  .kkeep-rail a, .rail-selection {transition: none;}
+}

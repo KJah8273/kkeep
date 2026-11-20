@@ -1,0 +1,8 @@
+'use client';
+import {useEffect,useState} from 'react';
+export default function AnalyticsPreference(){
+ const [excluded,setExcluded]=useState(false),[ready,setReady]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
+ useEffect(()=>{let active=true;fetch('/api/analytics/preference',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()).then(v=>{if(active){setExcluded(v.excluded);setReady(true);}}).catch(()=>{if(active)setMessage('Could not load this preference. Reopen settings to retry.');});return()=>{active=false;};},[]);
+ async function change(value:boolean){setBusy(true);setMessage('');try{const r=await fetch('/api/analytics/preference',{method:'POST',headers:{'Content-Type':'application/json','X-Kkeep-Analytics':'1'},body:JSON.stringify({excluded:value})});if(!r.ok)throw new Error();setExcluded(value);try{localStorage.setItem('kkeep-analytics-exclude',value?'1':'0');}catch{}window.dispatchEvent(new Event('kkeep-analytics-preference'));setMessage(value?'This browser is excluded.':'Future visits can be counted.');}catch{setMessage('Could not save. Please try again.');}finally{setBusy(false);}}
+ return <section className="browser-settings"><h3>Traffic privacy</h3><label className="settings-row"><span>Exclude this browser from traffic counts</span><input aria-label="Exclude this browser from traffic counts" type="checkbox" checked={excluded} disabled={!ready||busy} onChange={e=>change(e.target.checked)}/></label><p className="settings-note">Only country, device, browser family and app categories are counted. Searches and browsing URLs are not stored in analytics.</p>{message&&<p role="status">{message}</p>}<a href="/analytics" target="_top">Owner analytics ↗</a></section>;
+}

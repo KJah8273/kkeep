@@ -1,0 +1,9 @@
+'use client';
+import {useEffect,useState} from 'react';
+import GameProfile from '@/components/game-profile';
+export default function ConnectCommunity(){
+ const [open,setOpen]=useState(false),[name,setName]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ useEffect(()=>{const check=()=>void fetch('/api/profile',{headers:{'X-Kkeep-Profile':'1'},cache:'no-store'}).then(r=>r.json()).then(r=>setName(r.account?.name||''));check();window.addEventListener('kkeep-profile-change',check);return()=>window.removeEventListener('kkeep-profile-change',check);},[]);
+ async function connect(){setBusy(true);setError('');try{const state=new URL(location.href).searchParams.get('state');if(!state||!/^[a-f0-9]{64}$/.test(state))throw Error('Open Fix or idea and start sign-in again.');const r=await fetch('/api/community-auth',{method:'POST',headers:{'X-Kkeep-Profile':'1','Content-Type':'application/json'},body:JSON.stringify({state}),signal:AbortSignal.timeout(15000)}),data=await r.json();if(!r.ok)throw Error(data.error);location.assign(data.url);}catch(e){setError((e as Error).message);setBusy(false);}}
+ return <main style={{minHeight:'100dvh',display:'grid',placeContent:'center',gap:20,textAlign:'center',background:'#090b13',color:'white',padding:24}}><img src="/kkeep-icon.png" alt="Kkeep" width={64} style={{margin:'auto'}}/><h1>Fix or idea</h1>{name?<><p>Continue with {name}</p><button disabled={busy} onClick={connect} style={{padding:16,borderRadius:12,background:'#a9f4d4',color:'#13291f'}}>Continue</button></>:<button onClick={()=>setOpen(true)} style={{padding:16,borderRadius:12,background:'#a9f4d4',color:'#13291f'}}>Log in / Sign up</button>}{error&&<p role="alert">{error}</p>}<a href="https://kkeep-community.testerqrr1.chatgpt.site/">Back to Fix or idea</a><GameProfile open={open} onOpenChange={setOpen}/></main>;
+}

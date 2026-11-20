@@ -1,0 +1,45 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import test from 'node:test';
+import {guardWasm} from '../scripts/guard-hill-wasm.mjs';
+const sandbox=vm.createContext({});
+vm.runInContext(fs.readFileSync(new URL('../public/games/ipad-imports/assets/hill-asyncify.js',import.meta.url),'utf8'),sandbox);
+const create=sandbox.KkeepHcrAsyncify;
+for (const guarded of [false,true]) test(`guest continuations preserve concurrent threads, indirect calls, input and rejected reads (compiler guard: ${guarded})`,async()=>{
+  // Two live guest threads, repeated suspensions, an indirect call, event
+  // reentry while paused, linear stack restoration, and rejection cleanup.
+  const queue=new Map();
+  const pause=id=>new Promise((resolve,reject)=>queue.set(id,{resolve,reject}));
+  pause.isAsync=true;
+  const runtime=create({stackSize:65536});
+  const imports={pause};runtime.instrumentWasmImports(imports);
+  let binary=fs.readFileSync(new URL('./fixtures/hill-compat/continuation.wasm',import.meta.url));
+  if(guarded)binary=guardWasm(binary,{minimumBodyBytes:1,targetBodyBytes:2000}).bytes;
+  const {instance}=await WebAssembly.instantiate(binary,{env:imports});
+  const e=runtime.instrumentWasmExports(instance.exports);
+  e._emscripten_stack_restore(4000000);
+  const a=e.__main_argc_argv(1);
+  e._emscripten_stack_restore(3900000);
+  const b=e.hcr_thread_start(2);
+  assert.equal(e.hcr_ev_touch(9),10);
+  queue.get(2).resolve(200);
+  await new Promise(setImmediate);
+  queue.get(1).resolve(100);
+  await new Promise(setImmediate);
+  queue.get(21).resolve(300);
+  queue.get(22).resolve(400);
+  assert.equal(await a,512);
+  assert.equal(await b,714);
+  assert.equal(runtime.stats.contexts,0);
+  assert.equal(runtime.stats.maxContexts,2);
+  assert.equal(runtime.stats.suspensions,4);
+  assert.equal(runtime.stats.resumes,4);
+  e._emscripten_stack_restore(3800000);
+  const c=e.hcr_thread_start(3);
+  const failure=Error('disk read failed');
+  queue.get(3).reject(failure);
+  await assert.rejects(c,error=>error===failure);
+  assert.equal(runtime.stats.contexts,0);
+  assert.equal(e.asyncify_get_state(),0);
+});

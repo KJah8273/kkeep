@@ -1,0 +1,50 @@
+[
+  {
+    "package": "@mercuryworkshop/scramjet",
+    "version": "2.0.67-alpha.2",
+    "tarball": "https://registry.npmjs.org/@mercuryworkshop/scramjet/-/scramjet-2.0.67-alpha.2.tgz",
+    "integrity": "sha512-E/vmwQTqIoYmPLDb76t8Nv7O9kUdv8C6mRejdsT8APk5vBUYyIMI6CO0gyUVRX77Fc/NyoopfZNSaJ4qufJEww==",
+    "gitHead": null,
+    "files": [
+      "scramjet.js",
+      "scramjet.wasm"
+    ]
+  },
+  {
+    "package": "@mercuryworkshop/scramjet-controller",
+    "version": "0.0.14",
+    "tarball": "https://registry.npmjs.org/@mercuryworkshop/scramjet-controller/-/scramjet-controller-0.0.14.tgz",
+    "integrity": "sha512-0Sfn0xcUM69h6pIaPmntwFYcAOLyNzGPE6AQSMwrakYUFhJNLbEYWMa4actp6w3jVnwpQ9suggOO1bKrX5zioA==",
+    "gitHead": null,
+    "files": [
+      "controller.api.js",
+      "controller.inject.js",
+      "controller.sw.js"
+    ]
+  },
+  {
+    "package": "@titaniumnetwork-dev/ultraviolet",
+    "version": "3.2.10-kkeep.2",
+    "upstream": "https://github.com/titaniumnetwork-dev/Ultraviolet",
+    "gitHead": "62afe610f0df6707bf816d5966a4031feaf8b872",
+    "source": "vendor/ultraviolet-dist",
+    "build": "node scripts/build-ultraviolet.mjs",
+    "files": [
+      "uv/uv.bundle.js",
+      "uv/uv.client.js",
+      "uv/uv.handler.js",
+      "uv/uv.sw.js"
+    ],
+    "upstreamVersion": "3.2.10",
+    "tarball": "https://registry.npmjs.org/@titaniumnetwork-dev/ultraviolet/-/ultraviolet-3.2.10.tgz"
+  },
+  {
+    "package": "@mercuryworkshop/libcurl-transport",
+    "version": "2.0.5-kkeep.1",
+    "upstreamVersion": "2.0.5",
+    "upstream": "https://github.com/MercuryWorkshop/libcurl-transport",
+    "integrity": "sha512-YkAPEAWTEUZZkEOejmRQJxNHw90+kNQnoiSqa5H2sExHBXXdGSXEtg7/35A53U8MDVaznpAwjVbXRONSsfatzw==",
+    "source": "vendor/libcurl-transport",
+    "build": "node scripts/build-libcurl-transport.mjs"
+  }
+]
