@@ -1,0 +1,153 @@
+/* The original browser keeps its routes and tools; only its home is restyled. */
+.home-content.legacy-home-orbit {
+  --kk-text: #f1f5fa;
+  --kk-muted: #a6b2c3;
+  position: relative;
+  isolation: isolate;
+  align-items: center;
+  min-height: 100%;
+  padding: 116px 28px 66px;
+  background: #020305;
+  color: #f1f5fa;
+  font-family: KkeepDisplay, Arial, sans-serif;
+  overflow-x: clip;
+  scrollbar-color: #ffffff26 transparent;
+}
+
+.legacy-home-orbit > .home-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(980px, 100%);
+  margin: auto;
+  transform: none;
+}
+
+.legacy-home-orbit .home-identity h1.home-wordmark {
+  filter: none;
+}
+
+.legacy-home-orbit .home-search {
+  width: min(720px, 100%);
+  min-height: 70px;
+  gap: 17px;
+  padding: 10px 20px;
+  border: 1px solid #d9e9ff2e;
+  border-radius: 20px;
+  background: #10151eef;
+  color: #a6b2c3;
+  box-shadow: inset 0 1px #ffffff06, 0 16px 38px #0003;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.legacy-home-orbit .home-search:focus-within {
+  border-color: #b4d9ff;
+  box-shadow: 0 0 0 3px #b4d9ff18;
+}
+
+.legacy-home-orbit .home-search input {
+  min-height: 44px;
+  font-size: 20px;
+  color: #f1f5fa;
+}
+
+.legacy-home-orbit .home-search input::placeholder {
+  color: #a6b2c3;
+  opacity: 1;
+}
+
+.legacy-home-orbit .home-search .search-submit {
+  min-width: 48px;
+  border-radius: 12px;
+  background: #dceaff;
+  color: #101824;
+  font-size: 17px;
+}
+
+.legacy-home-orbit .home-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: min(780px, 100%);
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.legacy-home-orbit .shortcut {
+  flex: 0 0 116px;
+  min-height: 104px;
+  aspect-ratio: auto;
+  gap: 10px;
+  padding: 14px 7px;
+  border: 1px solid #c8defb20;
+  border-radius: 17px;
+  background: #0b1018d9;
+  color: #d7e1ef;
+  box-shadow: inset 0 1px #ffffff04;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition: transform .35s cubic-bezier(.22, 1, .36, 1), border-color .35s, background .35s;
+}
+
+.legacy-home-orbit .shortcut img,
+.legacy-home-orbit .shortcut > svg {
+  width: 38px;
+  height: 38px;
+}
+
+.legacy-home-orbit .shortcut img.hgola-cover {
+  width: 58px;
+  height: 40px;
+  border-radius: 8px;
+}
+
+.legacy-home-orbit .shortcut span {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.legacy-home-orbit .shortcut:focus-visible {
+  outline-color: #b4d9ff;
+  outline-offset: 4px;
+}
+
+@media (hover: hover) {
+  .legacy-home-orbit .shortcut:hover:not(:disabled) {
+    transform: translateY(-4px);
+    border-color: #c8defb54;
+    background: #172233;
+  }
+}
+
+@media (max-width: 800px) {
+  .home-content.legacy-home-orbit {padding-inline: 24px;}
+  .legacy-home-orbit .home-shortcuts {width: min(708px, 100%);}
+  .legacy-home-orbit .shortcut {flex-basis: 108px;}
+}
+
+@media (max-width: 560px) {
+  .home-content.legacy-home-orbit {padding: 110px 22px 48px;}
+  .legacy-home-orbit .home-search {min-height: 65px; padding: 8px 16px; gap: 12px; border-radius: 17px;}
+  .legacy-home-orbit .home-search input {font-size: 20px;}
+  .legacy-home-orbit .home-shortcuts {width: min(460px, 100%); gap: 10px; margin-top: 24px;}
+  .legacy-home-orbit .shortcut {flex-basis: calc((100% - 20px) / 3); min-height: 97px; padding: 12px 5px;}
+  .legacy-home-orbit .shortcut img,
+  .legacy-home-orbit .shortcut > svg {width: 34px; height: 34px;}
+  .legacy-home-orbit .shortcut span {font-size: 16px;}
+}
+
+@media (max-height: 640px) and (min-width: 561px) {
+  .home-content.legacy-home-orbit {padding-top: 94px; padding-bottom: 35px;}
+  .legacy-home-orbit .home-shortcuts {margin-top: 21px;}
+  .legacy-home-orbit .shortcut {min-height: 90px; padding-block: 10px;}
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .legacy-home-orbit .shortcut,
+  .legacy-home-orbit .home-search {transition: none;}
+  .legacy-home-orbit .shortcut:hover:not(:disabled) {transform: none;}
+}

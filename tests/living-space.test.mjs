@@ -124,7 +124,7 @@ test('body and secondary text maintain contrast on bright and dark wallpapers at
 });
 test('actual shell server rendering produces the real navigation and visible Wallpaper and Profile without browser-only failures',()=>{
  const require=createRequire(import.meta.url),module={exports:{}};
- const code=buildSync({entryPoints:[new URL('../components/proxy-browser.tsx',import.meta.url).pathname],bundle:true,platform:'node',format:'cjs',packages:'external',write:false}).outputFiles[0].text;
+ const code=buildSync({entryPoints:[new URL('../components/proxy-browser.tsx',import.meta.url).pathname],bundle:true,platform:'node',format:'cjs',packages:'external',loader:{'.css':'empty'},write:false}).outputFiles[0].text;
  vm.runInNewContext(code,{module,exports:module.exports,require,console,URL,setTimeout,clearTimeout,AbortController});
  const html=renderToString(React.createElement(module.exports.default));
  for(const path of ['/youtube','/tiktok','/gfn/index.html','/xbox/index.html','/snapchat','/hgola-altara','/stick-fight'])assert.ok(html.includes(path),path);
@@ -144,12 +144,12 @@ test('appearance commit reports quota failure without touching session storage o
  const api=module.exports.useLivingSpace(true,validateLegacy({}));assert.equal(api.commit({...defaults,wallpaper:'paper-depth'}),false);assert.equal(saved.wallpaper,'paper-depth');assert.equal(notices,1);
 });
 
-test('classic home keeps the studio but excludes the reverted Living Space shell',()=>{
+test('orbital home keeps the studio without covered legacy wallpaper work',()=>{
  const shell=read('components/proxy-browser.tsx'),studio=read('components/living-space/settings.tsx'),css=read('app/living-space.css');
  assert.doesNotMatch(shell,/Make it yours|Open wallpaper studio|kkeep-settings-trigger/);
  assert.match(shell,/<WallpaperGallery open=/);
  assert.match(shell,/<ProfilePanel open=/);
- assert.match(shell,/<LivingWallpaper preferences=\{preferences\}/);
+ assert.doesNotMatch(shell,/<LivingWallpaper|<PhotoBackground|<Particles/);
  assert.doesNotMatch(shell,/<Welcome|<LivingSettings|data-living=|quiet-tool|settingsIntro/);
  assert.doesNotMatch(studio,/Preview welcome message|Local helper|Shell fallback|Shortcut layout|Appearance profiles/);
  assert.match(studio,/<DialogTitle>Wallpaper studio<\/DialogTitle>/);

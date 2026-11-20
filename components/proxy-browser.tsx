@@ -13,13 +13,9 @@ import WallpaperGallery from '@/components/wallpaper-gallery';
 import ProfilePanel from '@/components/profile-panel';
 import FeedbackMenu from '@/components/feedback-menu';
 import type {ProfileSnapshot} from '@/lib/profile-model';
-import LivingBoundary from '@/components/living-space/boundary';
-import LivingWallpaper from '@/components/living-space/wallpaper';
 import {useLivingSpace} from '@/components/living-space/use-living-space';
 import {contrastAccent,type Preferences,type LegacyAppearance} from '@/lib/living-space/model';
 
-import PhotoBackground from '@/components/photo-wallpaper';
-import Particles from '@/components/particles';
 import {analyticsSurfaceForUrl,setAnalyticsSurface} from '@/lib/analytics-client';
 import {Tabs,TabsContent,TabsList,TabsTrigger} from '@/components/ui/tabs';
 import {Button} from '@/components/ui/button';
@@ -94,7 +90,6 @@ function ProxyView({tab,onState,onOpen,onHandle,videoMode,active,touchControls,o
 
 export default function ProxyBrowser({startApp}:{startApp?:'TikTok'|'YouTube'|'Snapchat'|'Roblox'|'Clash Royale'}={}){
   const [studio,setStudio]=useState(false),[profileOpen,setProfileOpen]=useState(false);
-  const tilt=false;
   const [homeFocused,setHomeFocused]=useState(false),[homeBusy,setHomeBusy]=useState(false);
   const [theme,setTheme]=useState<ThemeId>(defaultTheme);
   const [wallpaper,setWallpaper]=useState<Wallpaper>('stars');
@@ -107,6 +102,7 @@ export default function ProxyBrowser({startApp}:{startApp?:'TikTok'|'YouTube'|'S
   const handles=useRef(new Map<string,ProxyHandle>()),sequence=useRef(0),addressInput=useRef<HTMLInputElement>(null);
   const legacy={theme,wallpaper,match:matchWallpaper,moving,dense};
   const living=useLivingSpace(appearanceReady,legacy),preferences=living.preferences;
+  const homeMotion=preferences.mode==='original'||preferences.quiet||preferences.motion==='reduced'||preferences.quality==='static'||preferences.speed===0?'reduced':'auto';
   const current=tabs.find(tab=>tab.id===active)??tabs[0];
   const photoWallpaper=photoWallpapers.find(item=>item.id===wallpaper);
   const currentRef=useRef(current);currentRef.current=current;
@@ -141,7 +137,6 @@ export default function ProxyBrowser({startApp}:{startApp?:'TikTok'|'YouTube'|'S
     return saved;
   }
   function applyWallpaper(value:Preferences,look:LegacyAppearance){const saved=living.commit(value);return applyLegacy({...look,wallpaper:isWallpaper(value.wallpaper)?value.wallpaper:value.wallpaper==='original'?living.original.wallpaper:look.wallpaper})&&saved;}
-  const rotateWallpaper=useCallback((wallpaper:string)=>living.commit({...preferences,wallpaper},false),[living.commit,preferences]);
   function restoreProfile(value:ProfileSnapshot){
     try{localStorage.setItem('kkeep-living-original-v1',JSON.stringify(value.original));}catch{}
     living.restoreOriginal(value.original);applyLegacy(value.legacy);living.commit(value.preferences);
@@ -223,7 +218,6 @@ export default function ProxyBrowser({startApp}:{startApp?:'TikTok'|'YouTube'|'S
   function home(){exitFull();const tab=tabs.find(item=>!item.url);if(tab)setActive(tab.id);else newTab();}
 
   return <main className={['workspace',!current.url?'home-mode':'',!current.url&&photoWallpaper?'photo-mode':'',expanded&&current.url?'full-view':''].join(' ')}>
-    {!current.url&&(living.loaded?<LivingBoundary resetKey={preferences.wallpaper} fallback={<div className="living-boot-wallpaper" aria-hidden="true"/>}><LivingWallpaper preferences={preferences} original={living.original.wallpaper} paused={studio||profileOpen||homeFocused||homeBusy} tilt={tilt} onRotate={rotateWallpaper}/></LivingBoundary>:<>{photoWallpaper&&<PhotoBackground wallpaper={photoWallpaper}/>} {wallpaper!=='none'&&<Particles moving={moving&&!studio} mode={wallpaper==='constellation'?'constellation':'stars'} dense={dense}/>}</>)}
     <header className="workspace-header">
       {current.url&&<button className="workspace-title" onClick={home} aria-label="Kkeep home">kkeep</button>}
       <nav className="workspace-actions" aria-label="Kkeep tools">
@@ -241,7 +235,7 @@ export default function ProxyBrowser({startApp}:{startApp?:'TikTok'|'YouTube'|'S
         </div>
       </>}
       {tabs.map(tab=><TabsContent forceMount key={tab.id} value={tab.id} className={'browser-content '+(active===tab.id?'visible':'concealed')}>
-        {tab.url?<ProxyView key={tab.id+'-'+(tab.restart??0)} tab={tab} active={tab.id===active} touchControls={expanded&&active===tab.id&&touchTab===tab.id} onControlsClose={()=>setTouchTab(null)} onControlsBack={exitFull} videoMode={videoMode&&tab.id===active} onState={update} onHandle={onHandle} onOpen={url=>{setTouchTab(null);newTab(url,tab.cloud?tab.icon:undefined);}}/>:<KkeepHome onFocusChange={setHomeFocused} onBusyChange={setHomeBusy} onSearch={search} onApp={openApp}/>}
+        {tab.url?<ProxyView key={tab.id+'-'+(tab.restart??0)} tab={tab} active={tab.id===active} touchControls={expanded&&active===tab.id&&touchTab===tab.id} onControlsClose={()=>setTouchTab(null)} onControlsBack={exitFull} videoMode={videoMode&&tab.id===active} onState={update} onHandle={onHandle} onOpen={url=>{setTouchTab(null);newTab(url,tab.cloud?tab.icon:undefined);}}/>:<KkeepHome motion={homeMotion} paused={!living.loaded||active!==tab.id||studio||profileOpen||homeFocused||homeBusy} onFocusChange={setHomeFocused} onBusyChange={setHomeBusy} onSearch={search} onApp={openApp}/>}
       </TabsContent>)}
     </Tabs>
     {expanded&&current.url&&touchTab!==active&&<div className={'full-controls '+(videoMode?'video-controls':'')}>

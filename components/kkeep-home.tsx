@@ -7,6 +7,9 @@ import {linkedGames} from '@/lib/games/linked-games';
 import {prepareProxy} from '@/lib/proxy-client';
 import {Button} from '@/components/ui/button';
 import {Dialog,DialogTrigger,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/components/ui/dialog';
+import HomeIdentity from '@/components/home-identity';
+import HomeOrbit,{type HomeOrbitProps} from '@/components/home-orbit';
+import '@/app/legacy-home-orbit.css';
 
 function enterGameFullscreen(event:MouseEvent<HTMLAnchorElement>){
   if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
@@ -20,13 +23,21 @@ function enterGameFullscreen(event:MouseEvent<HTMLAnchorElement>){
   }catch{/* The game still fills the window when native fullscreen is unavailable. */}
 }
 
-export default function KkeepHome({onSearch,onApp,onFocusChange,onBusyChange}:{onFocusChange?:(value:boolean)=>void;onBusyChange?:(value:boolean)=>void;onSearch:(value:string)=>void;onApp:(app:App)=>void}){
+type KkeepHomeProps=HomeOrbitProps&{
+  onFocusChange?:(value:boolean)=>void;
+  onBusyChange?:(value:boolean)=>void;
+  onSearch:(value:string)=>void;
+  onApp:(app:App)=>void;
+};
+
+export default function KkeepHome({onSearch,onApp,onFocusChange,onBusyChange,motion='auto',paused=false}:KkeepHomeProps){
   const [query,setQuery]=useState('');
   useEffect(()=>()=>{onFocusChange?.(false);onBusyChange?.(false);},[onFocusChange,onBusyChange]);
   function submit(event:FormEvent){event.preventDefault();if(query.trim())onSearch(query);}
-  return <section className="home-content" aria-label="Kkeep home">
+  return <section className="home-content legacy-home-orbit" aria-label="Kkeep home">
+    <HomeOrbit motion={motion} paused={paused}/>
     <div className="home-inner">
-      <h1 className="home-wordmark">kkeep</h1>
+      <HomeIdentity motion={motion} paused={paused}/>
       <form className="home-search" onSubmit={submit} role="search">
         <Search size={24} aria-hidden="true"/>
         <input aria-label="Search or enter URL" placeholder="Search or enter URL…" value={query} onFocus={()=>{prepareProxy();onFocusChange?.(true);}} onBlur={()=>onFocusChange?.(false)} onChange={event=>setQuery(event.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false}/>
