@@ -60,6 +60,7 @@ export const kkeepChatProfiles=sqliteTable('kkeep_chat_profiles',{
  avatarKey:text('avatar_key'),avatarType:text('avatar_type'),avatarVersion:text('avatar_version'),
  bannerKey:text('banner_key'),bannerType:text('banner_type'),bannerVersion:text('banner_version'),
  nameColor:text('name_color').notNull().default('#eeeeee'),primaryColor:text('primary_color').notNull().default('#181b22'),secondaryColor:text('secondary_color').notNull().default('#121212'),
+ avatarDecoration:text('avatar_decoration').notNull().default('none'),nameplateStyle:text('nameplate_style').notNull().default('none'),
  joined:integer('joined').notNull(),updated:integer('updated').notNull(),
 },t=>[index('kkeep_chat_profiles_search').on(t.searchKey),index('kkeep_chat_profiles_joined').on(t.joined)]);
 export const kkeepChatFriends=sqliteTable('kkeep_chat_friends',{
@@ -94,3 +95,15 @@ export const kkeepChatChannels=sqliteTable('kkeep_chat_channels',{
 export const kkeepChatAvatarCleanup=sqliteTable('kkeep_chat_avatar_cleanup',{
  key:text('key').primaryKey(),account:text('account').notNull().references(()=>kkeepChatProfiles.account),created:integer('created').notNull(),
 },t=>[index('kkeep_chat_avatar_cleanup_account').on(t.account,t.created)]);
+export const kkeepChatOwner=sqliteTable('kkeep_chat_owner',{
+ id:integer('id').primaryKey(),account:text('account').notNull().unique().references(()=>kkeepAccounts.id),created:integer('created').notNull(),
+},()=>[check('kkeep_chat_owner_singleton',sql.raw('id=1'))]);
+export const kkeepChatRoles=sqliteTable('kkeep_chat_roles',{
+ id:text('id').primaryKey(),name:text('name').notNull(),color:text('color').notNull(),position:integer('position').notNull(),permissions:integer('permissions').notNull(),created:integer('created').notNull(),updated:integer('updated').notNull(),
+},()=>[check('kkeep_chat_role_position',sql.raw('position BETWEEN 1 AND 9999')),check('kkeep_chat_role_permissions',sql.raw('permissions BETWEEN 0 AND 15'))]);
+export const kkeepChatMemberRoles=sqliteTable('kkeep_chat_member_roles',{
+ id:integer('id').primaryKey({autoIncrement:true}),account:text('account').notNull().references(()=>kkeepChatProfiles.account),role:text('role').notNull().references(()=>kkeepChatRoles.id),created:integer('created').notNull(),
+},t=>[uniqueIndex('kkeep_chat_member_role_pair').on(t.account,t.role),index('kkeep_chat_member_roles_role').on(t.role,t.account)]);
+export const kkeepChatModeration=sqliteTable('kkeep_chat_moderation',{
+ account:text('account').primaryKey().references(()=>kkeepChatProfiles.account),banned:integer('banned').notNull().default(0),timeoutUntil:integer('timeout_until'),reason:text('reason').notNull().default(''),updatedBy:text('updated_by').notNull().references(()=>kkeepAccounts.id),updated:integer('updated').notNull(),
+},()=>[check('kkeep_chat_moderation_banned',sql.raw('banned IN (0,1)'))]);

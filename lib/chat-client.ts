@@ -1,7 +1,7 @@
 import {CHAT_GIF_MAX,type ChatProfile} from './chat-model';
 
 export class ChatApiError extends Error {
-  constructor(message: string, public status: number, public retryAfter = 0) {super(message);this.name='ChatApiError';}
+  constructor(message: string, public status: number, public retryAfter = 0,public code='') {super(message);this.name='ChatApiError';}
 }
 
 type ChatRequestOptions = {method?: string; body?: unknown; signal?: AbortSignal; contentType?: string};
@@ -15,12 +15,25 @@ export async function chatRequest<T>(path: string, options: ChatRequestOptions =
     body: options.body===undefined ? undefined : raw ? options.body as Blob : JSON.stringify(options.body),
   });
   const result = await response.json().catch(()=>({error:'Chat could not be reached. Please try again.'}));
-  if (!response.ok) throw new ChatApiError(result.error || 'Chat could not be reached. Please try again.', response.status, Number(response.headers.get('Retry-After') || 0));
+  if (!response.ok) throw new ChatApiError(result.error || 'Chat could not be reached. Please try again.', response.status, Number(response.headers.get('Retry-After') || 0),result.code||'');
   return result as T;
 }
 
 export function announceChatProfile(profile: ChatProfile) {
   window.dispatchEvent(new CustomEvent('kkeep-chat-profile-change', {detail:profile}));
+}
+
+export type ChatAccountIdentity={id:string;name:string;username:string};
+export async function renameChatAccount(username:string,signal?:AbortSignal):Promise<{account:ChatAccountIdentity}> {
+  const timeout=AbortSignal.timeout(20000);
+  const response=await fetch('/api/profile',{method:'POST',credentials:'same-origin',cache:'no-store',signal:signal?AbortSignal.any([signal,timeout]):timeout,headers:{'X-Kkeep-Profile':'1','Content-Type':'application/json'},body:JSON.stringify({action:'username',username})});
+  const result=await response.json().catch(()=>({error:'Your username could not be updated. Try again.'}));
+  if(!response.ok)throw new ChatApiError(result.error||'Your username could not be updated. Try again.',response.status,Number(response.headers.get('Retry-After')||0),result.code||'');
+  return result as {account:ChatAccountIdentity};
+}
+/** Dispatch after a complete editor save, so an account refresh cannot interrupt it. */
+export function announceChatAccountRename(account:ChatAccountIdentity) {
+  window.dispatchEvent(new CustomEvent('kkeep-account-renamed',{detail:account}));
 }
 
 /** Prepare static images for upload while preserving the original frames of GIFs. */

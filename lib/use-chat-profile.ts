@@ -39,10 +39,12 @@ export function useChatProfile(enabled=true){
     const profileChanged=()=>void refresh();
     window.addEventListener('kkeep-profile-change',authChanged);
     window.addEventListener('kkeep-chat-profile-change',profileChanged);
+    window.addEventListener('kkeep-account-renamed',profileChanged);
     return()=>{
       ++generation.current;controller.current?.abort();
       window.removeEventListener('kkeep-profile-change',authChanged);
       window.removeEventListener('kkeep-chat-profile-change',profileChanged);
+      window.removeEventListener('kkeep-account-renamed',profileChanged);
     };
   },[refresh]);
 

@@ -1,10 +1,25 @@
 /** Public chat contracts. Session tokens, login keys and storage keys never leave the server. */
+export const CHAT_PERMISSIONS = ['delete_messages','timeout_members','ban_members','manage_channels'] as const;
+export type ChatPermission = typeof CHAT_PERMISSIONS[number];
+export type ChatRoleBadge = {id:string;name:string;color:string;position:number};
+export type ChatRole = ChatRoleBadge & {permissions:ChatPermission[]};
+export const CHAT_AVATAR_DECORATIONS = ['none','solar','fangs','wraith','sakura','crescent','shadow','wings'] as const;
+export const CHAT_NAMEPLATE_STYLES = ['none','ravens','crimson','moonlight','ocean','haunted','ink'] as const;
+export type ChatAvatarDecoration = typeof CHAT_AVATAR_DECORATIONS[number];
+export type ChatNameplateStyle = typeof CHAT_NAMEPLATE_STYLES[number];
+export type ChatModeration = {banned:boolean;timeoutUntil:number|null};
+export type ChatAccess = ChatModeration & {isOwner:boolean;permissions:ChatPermission[];canManageRoles:boolean;canClaimOwner:boolean};
 export type ChatUser = {
   id: string;
+  username: string;
   name: string;
   displayName: string;
   nameColor: string;
   avatarUrl: string | null;
+  avatarDecoration: ChatAvatarDecoration;
+  nameplateStyle: ChatNameplateStyle;
+  roles: ChatRoleBadge[];
+  isOwner: boolean;
 };
 export type ChatProfile = ChatUser & {bio: string; joinedAt: number; bannerUrl: string | null; primaryColor: string; secondaryColor: string};
 export type ChatRelationship = 'self' | 'none' | 'friends' | 'incoming' | 'outgoing' | 'blocked';
@@ -27,7 +42,8 @@ export type ChatMessage = {
   /** Returned only to the author; lets an uncertain send retry safely. */
   clientId?: string;
 };
-export type ChatSession = {account: {id: string; name: string} | null; profile: ChatProfile | null; memberCount: number};
+export type ChatSession = {account: {id: string; name: string; username:string} | null; profile: ChatProfile | null; memberCount: number;access:ChatAccess};
+export type ChatMember = {user:ChatUser;moderation:ChatModeration;canTimeout:boolean;canBan:boolean};
 export type ChatMessagesPage = {messages: ChatMessage[]; cursor: number; hasMore: boolean; oldestId: number | null};
 export type ChatFriends = {friends: ChatFriend[]; incoming: ChatFriend[]; outgoing: ChatFriend[]};
 export type ChatChannel = {id: string; name: string; category: string; readOnly: boolean};

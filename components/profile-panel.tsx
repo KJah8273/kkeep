@@ -10,10 +10,10 @@ import {snapshot,type ProfileSnapshot} from '@/lib/profile-model';
 const api=async(input?:unknown)=>{const r=await fetch('/api/profile',{method:input?'POST':'GET',headers:{'X-Kkeep-Profile':'1',...(input?{'Content-Type':'application/json'}:{})},body:input?JSON.stringify(input):undefined,credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(20000)});const d=await r.json();if(!r.ok)throw Error(d.error||'Profile is unavailable.');return d;};
 export default function ProfilePanel({open,onOpenChange,data,onRestore,ready}:{open:boolean;onOpenChange:(open:boolean)=>void;data:ProfileSnapshot;onRestore:(v:ProfileSnapshot)=>void;ready:boolean}){
  const [name,setName]=useState(''),[mode,setMode]=useState<'login'|'signup'>('login'),[error,setError]=useState(''),[busy,setBusy]=useState(false),[sync,setSync]=useState<'off'|'busy'|'saved'|'error'>('off');
- const gate=useRef(false),revision=useRef(0),saved=useRef(''),pending=useRef<ProfileSnapshot|null>(null),working=useRef(false),latest=useRef(data),restore=useRef(onRestore),alive=useRef(true);latest.current=data;restore.current=onRestore;
+ const accountId=useRef<string|null>(null),gate=useRef(false),revision=useRef(0),saved=useRef(''),pending=useRef<ProfileSnapshot|null>(null),working=useRef(false),latest=useRef(data),restore=useRef(onRestore),alive=useRef(true);latest.current=data;restore.current=onRestore;
  async function connect(requireAccount=false){
   gate.current=false;const result=await api();if(!alive.current)return;
-  setName(result.account?.name||'');revision.current=result.revision||0;
+  accountId.current=result.account?.id||null;setName(result.account?.name||'');revision.current=result.revision||0;
   if(!result.account){setSync('off');if(requireAccount)throw Error('Login cookie could not be saved. Allow website cookies and try again.');return;}
   if(result.data){const valid=snapshot(result.data);await syncSelectedMedia(valid.preferences.wallpaper,'download');saved.current=JSON.stringify(valid);restore.current(valid);latest.current=valid;}
   else saved.current='';
@@ -28,10 +28,11 @@ export default function ProfilePanel({open,onOpenChange,data,onRestore,ready}:{o
   catch(e){gate.current=false;setSync('error');setError((e as Error).message);}
   finally{working.current=false;}
  }
+ useEffect(()=>{const renamed=(event:Event)=>{const account=(event as CustomEvent<{id:string;name:string;username:string}>).detail;if(account?.id===accountId.current)setName(account.name||account.username);};window.addEventListener('kkeep-account-renamed',renamed);return()=>window.removeEventListener('kkeep-account-renamed',renamed);},[]);
  useEffect(()=>{alive.current=true;if(ready)void connect().catch(()=>{if(alive.current)setSync('off');});return()=>{alive.current=false;gate.current=false;};},[ready]);
  useEffect(()=>{if(!ready||!gate.current)return;const timer=setTimeout(()=>void persist(data),700);return()=>clearTimeout(timer);},[data,ready,name]);
  async function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();const fields=new FormData(e.currentTarget);setBusy(true);setError('');try{await api({action:mode,username:fields.get('username'),password:fields.get('password')});await connect(true);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
- async function logout(){setBusy(true);try{await persist(latest.current);await api({action:'logout'});gate.current=false;setName('');setSync('off');window.dispatchEvent(new Event('kkeep-profile-change'));}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
+ async function logout(){setBusy(true);try{await persist(latest.current);await api({action:'logout'});gate.current=false;accountId.current=null;setName('');setSync('off');window.dispatchEvent(new Event('kkeep-profile-change'));}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="proxy-dialog profile-dialog"><DialogHeader className="sr-only"><DialogTitle>Profile</DialogTitle><DialogDescription>Sign up or log in to restore your Kkeep profile.</DialogDescription></DialogHeader>
  <div className="profile-avatar"><AccountAvatar size={72}/></div>
  {name?<><strong className="profile-name">{name}</strong><span role="status" aria-label={sync==='saved'?'Profile saved':sync==='busy'?'Saving profile':'Sync needs attention'}>{sync==='busy'?<LoaderCircle className="spin"/>:sync==='error'?<CloudOff/>:<CloudCheck/>}</span><Button variant="secondary" disabled={busy||sync==='busy'} onClick={logout}><LogOut size={18}/>Log out</Button></>:<><div className="profile-tabs"><button type="button" aria-pressed={mode==='signup'} onClick={()=>{setMode('signup');setError('');}}>Sign up</button><button type="button" aria-pressed={mode==='login'} onClick={()=>{setMode('login');setError('');}}>Log in</button></div><form className="profile-form" onSubmit={submit}>

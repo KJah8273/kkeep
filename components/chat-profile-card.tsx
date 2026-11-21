@@ -2,6 +2,7 @@
 
 import {useEffect,useState,type CSSProperties,type ReactNode} from 'react';
 import ChatAvatar from './chat-avatar';
+import {ChatNameplateArt,ChatRoleBadges} from './chat-appearance';
 import {chatNameColor,normalizeChatColor} from '@/lib/chat-client';
 import type {ChatProfile} from '@/lib/chat-model';
 import '@/app/chat.css';
@@ -27,8 +28,8 @@ export default function ChatProfileCard({profile,preview=false,actions,showJoine
     </div>
     <div className="chat-card-body">
       <div className="chat-card-avatar"><ChatAvatar user={profile} size={76}/>{preview&&<span className="chat-card-self-status" aria-label="You are online"/>}</div>
-      <h2 dir="auto">{profile.displayName}</h2>
-      <p className="chat-card-handle">@{profile.name}</p>
+      <div className={'chat-card-identity '+(profile.nameplateStyle&&profile.nameplateStyle!=='none'?'chat-nameplate':'')}><ChatNameplateArt kind={profile.nameplateStyle}/><h2 dir="auto">{profile.displayName}</h2><p className="chat-card-handle">@{profile.username||profile.name}</p></div>
+      <ChatRoleBadges user={profile}/>
       {profile.bio&&<p className="chat-card-bio" dir="auto">{profile.bio}</p>}
       {showJoined&&<p className="chat-card-joined">Joined {new Date(profile.joinedAt).toLocaleDateString([],{month:'long',year:'numeric'})}</p>}
       {actions?<div className="chat-card-actions">{actions}</div>:preview?<div className="chat-card-example" aria-hidden="true">Example button</div>:null}

@@ -43,14 +43,24 @@ async function channel(owner,name='room-'+randomBytes(4).toString('hex')){
   const made=await call('/channels',owner,'POST',{name,category:'Chat'},ownerHeaders);
   assert.equal(made.status,201,JSON.stringify(made.data));return made.data.channel;
 }
+let ownerFixture;
+async function siteOwner(){
+  if(!ownerFixture){
+    ownerFixture=await person('TrustedOwner');
+    assert.equal((await call('/owner/claim',ownerFixture,'POST',{},ownerHeaders)).status,200);
+  }
+  return ownerFixture;
+}
 
-test('chat requires same-origin Profile auth, explicit enrollment and safe public profile fields',async()=>{
-  assert.equal((await call('/messages')).status,401);
+test('public chat is readable while participation requires same-origin Profile auth and enrollment',async()=>{
+  assert.equal((await call('/messages')).status,200);
+  assert.equal((await send(undefined)).status,401);
   assert.equal((await call('/session',undefined,'GET',undefined,{'X-Kkeep-Profile':'0'})).status,403);
   const user=await person('Profile',false),hidden=await person('Hidden',false);
   assert.equal((await call('/session',user)).data.account.id,user.id);
   assert.equal((await call('/session',user)).data.profile,null);
-  assert.equal((await call('/messages',user)).data.code,'join_required');
+  assert.equal((await call('/messages',user)).status,200);
+  assert.equal((await send(user)).data.code,'join_required');
   assert.equal((await call('/join',user,'POST',{}, {Origin:'https://foreign.test'})).status,403);
   assert.equal((await call('/join',user,'POST',{}, {'Sec-Fetch-Site':'cross-site'})).status,403);
   assert.equal((await call('/join',user,'POST',{displayName:'bad<script>'})).status,400);
@@ -142,7 +152,7 @@ test('blocking is bilateral for discovery/DM access and an atomic check prevents
 
 
 test('a public block hides both players and channel archive races cannot insert messages',async()=>{
-  const a=await person(),b=await person(),room=(await channel(a)).id;
+  const a=await person(),b=await person(),room=(await channel(await siteOwner())).id;
   const first=await send(a,room,'Visible before blocking');assert.equal(first.status,201);
   assert.equal((await call('/blocks',b,'POST',{accountId:a.id})).status,200);
   assert.ok(!(await call('/messages?room='+encodeURIComponent(room),b)).data.messages.some(m=>m.author.id===a.id));
@@ -158,7 +168,7 @@ test('a public block hides both players and channel archive races cannot insert 
 });
 
 test('event cursors preserve pagination and propagate author soft-deletes to other clients',async()=>{
-  const a=await person(),b=await person(),room=(await channel(a)).id;
+  const a=await person(),b=await person(),room=(await channel(await siteOwner())).id;
   const sent=[];
   for(let index=0;index<6;index++){const response=await send(a,room,'History '+index);assert.equal(response.status,201,JSON.stringify(response.data));sent.push(response.data.message);}
   const initial=await call('/messages?room='+encodeURIComponent(room)+'&limit=3',b);
@@ -180,22 +190,23 @@ test('event cursors preserve pagination and propagate author soft-deletes to oth
   assert.equal((await call('/messages?room='+encodeURIComponent(room)+'&after=1&before=2',b)).status,400);
 });
 
-test('verified owner manages channels; names, body roles, and other platform users grant nothing',async()=>{
-  const owner=await person('Owner'),member=await person('Admin');
+test('durably linked owner manages channels; names, body roles, and other platform users grant nothing',async()=>{
+  const owner=await siteOwner(),member=await person('Admin');
   const defaults=await call('/channels');
   assert.equal(defaults.status,200);assert.ok(defaults.data.channels.some(c=>c.id==='public'&&c.name==='general'));
   assert.equal(defaults.data.canManageChannels,false);
-  const mine=await call('/channels',owner,'GET',undefined,ownerHeaders);
+  const mine=await call('/channels',owner);
   assert.equal(mine.data.canManageChannels,true);assert.equal(mine.data.ownerConfigured,true);assert.equal(mine.data.ownerSignedIn,true);
   assert.equal((await call('/channels',member,'POST',{name:'forbidden',owner:true,role:'owner'})).status,403);
   assert.equal((await call('/channels',member,'POST',{name:'forbidden'},{'oai-authenticated-user-email':'someone-else@example.test'})).status,403);
+  assert.equal((await call('/channels',member,'POST',{name:'forbidden'},ownerHeaders)).status,403);
   assert.equal((await call('/channels',member,'POST',{name:'forbidden'},ownerHeaders,{...env,KKEEP_ANALYTICS_OWNER_EMAIL:undefined})).status,403);
-  assert.equal((await send(member,'channel:rules','Cannot post')).data.code,'owner_required');
+  assert.equal((await send(member,'channel:rules','Cannot post')).data.code,'permission_required');
   assert.equal((await send(owner,'channel:rules','A new owner rule.',randomUUID(),ownerHeaders)).status,201);
   const made=await call('/channels',owner,'POST',{name:'announcements-extra',category:'Kkeep',readOnly:true},ownerHeaders);
   assert.equal(made.status,201);
   const key=made.data.channel.id,path='/channels/'+encodeURIComponent(key);
-  assert.equal((await call(path,member,'PATCH',{name:'stolen'})).data.code,'owner_required');
+  assert.equal((await call(path,member,'PATCH',{name:'stolen'})).data.code,'permission_required');
   assert.equal((await call(path,owner,'PATCH',{name:'renamed',readOnly:false},ownerHeaders)).data.channel.name,'renamed');
   const msg=await send(member,key,'An open channel now.');assert.equal(msg.status,201);
   assert.equal((await call(path,owner,'DELETE',undefined,ownerHeaders)).status,200);
@@ -210,7 +221,7 @@ test('verified owner manages channels; names, body roles, and other platform use
 });
 
 test('oversized bodies and message limits are bounded, and successful retry does not resend',async()=>{
-  const a=await person(),room=(await channel(a)).id;
+  const a=await person(),room=(await channel(await siteOwner())).id;
   assert.equal((await send(a,room,'x'.repeat(2001))).status,400);
   assert.equal((await call('/messages',a,'POST','x'.repeat(13000),{'Content-Type':'application/json'})).status,413);
   const firstNonce=randomUUID(),first=await send(a,room,'Original',firstNonce);
@@ -250,8 +261,8 @@ test('avatars require safe bounded rasters, normalize before storage and never e
   const image=await call(path,b,'GET',undefined,{'X-Kkeep-Profile':''},storage);
   assert.equal(image.status,200);assert.equal(image.response.headers.get('Content-Type'),'image/webp');
   assert.match(image.response.headers.get('Cache-Control'),/private/);
-  assert.equal((await call(path,undefined,'GET',undefined,{'X-Kkeep-Profile':''},storage)).status,401);
-  assert.equal((await call(path,outsider,'GET',undefined,{'X-Kkeep-Profile':''},storage)).status,403);
+  assert.equal((await call(path,undefined,'GET',undefined,{'X-Kkeep-Profile':''},storage)).status,200);
+  assert.equal((await call(path,outsider,'GET',undefined,{'X-Kkeep-Profile':''},storage)).status,200);
   assert.equal((await call('/avatar/'+encodeURIComponent('../../profile-media/private'),b,'GET',undefined,{'X-Kkeep-Profile':''},storage)).status,400);
   assert.equal((await call('/avatar',a,'PUT',webp,{'Content-Type':'image/webp'},storage)).status,200);
   assert.equal(storage.files.size,1,'Only the current version remains after successful cleanup');
@@ -331,7 +342,7 @@ test('concurrent avatar upload/delete uses version leases in both directions',as
 });
 
 test('rename that races with archive cannot restore a channel',async()=>{
-  const owner=await person(),created=await channel(owner);
+  const owner=await siteOwner(),created=await channel(owner);
   let archived=false;
   function wrap(query,sql,args=[]){
     return {
@@ -388,8 +399,8 @@ test('static banners accept real 960 by 320 PNGs and keep image ownership and st
   assert.equal(image.status,200);assert.deepEqual(avatarDimensions(new Uint8Array(image.data),'image/png'),{width:960,height:320});
   assert.equal(image.response.headers.get('Content-Type'),'image/png');assert.equal(image.response.headers.get('X-Content-Type-Options'),'nosniff');
   assert.equal(image.response.headers.get('Cross-Origin-Resource-Policy'),'same-origin');assert.match(image.response.headers.get('Content-Security-Policy'),/sandbox/);
-  assert.equal((await call(path,undefined,'GET',undefined,{'X-Kkeep-Profile':''},storage)).status,401);
-  assert.equal((await call(path,outsider,'GET',undefined,{'X-Kkeep-Profile':''},storage)).status,403);
+  assert.equal((await call(path,undefined,'GET',undefined,{'X-Kkeep-Profile':''},storage)).status,200);
+  assert.equal((await call(path,outsider,'GET',undefined,{'X-Kkeep-Profile':''},storage)).status,200);
   assert.equal((await call(path,b,'GET',undefined,{'Sec-Fetch-Site':'cross-site'},storage)).status,403);
   assert.equal((await call('/banner/'+a.id,b,'DELETE',undefined,{},storage)).status,405);
   assert.equal((await call('/banner/'+a.id,b,'PUT',bannerPng,{'Content-Type':'image/png'},storage)).status,405);

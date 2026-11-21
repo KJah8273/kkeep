@@ -1,22 +1,24 @@
-import {profileIdentity} from './profile.ts';
+import {digest,profileIdentity} from './profile.ts';
 import {analyticsOwner, type AnalyticsEnv} from './analytics.ts';
+import {chatOwnerAccount} from './chat-owner.ts';
+import {activeSql,chatAccess,moderationSql,ownerSql,permissionBits,permissionSql,roleList,type ChatSql} from './chat-access.ts';
 import {normalizeChatAvatar} from './chat-avatar.ts';
 import {normalizeChatGif} from './chat-gif.ts';
 import type {BrowserDB} from './browser-data.ts';
 import type {GameBucket} from './game-assets.ts';
 import {detectImageType, normalizeText} from '../lib/chat-moderation.ts';
-import {DEFAULT_CHAT_CHANNELS, CHAT_AVATAR_MAX, CHAT_GIF_MAX, CHAT_BIO_MAX, CHAT_MESSAGE_MAX, type ChatChannel, type ChatProfile, type ChatUser, type ChatMessage, type ChatFriend, type ChatRelationship, type ChatConversation} from '../lib/chat-model.ts';
+import {DEFAULT_CHAT_CHANNELS, CHAT_AVATAR_MAX, CHAT_GIF_MAX, CHAT_BIO_MAX, CHAT_MESSAGE_MAX,CHAT_AVATAR_DECORATIONS,CHAT_NAMEPLATE_STYLES,CHAT_PERMISSIONS,type ChatAvatarDecoration,type ChatNameplateStyle,type ChatRoleBadge,type ChatRole,type ChatPermission,type ChatAccess, type ChatChannel, type ChatProfile, type ChatUser, type ChatMessage, type ChatFriend, type ChatRelationship, type ChatConversation} from '../lib/chat-model.ts';
 
 export type ChatEnv = AnalyticsEnv & {
   DB?: BrowserDB;
   GAME_ASSETS?: GameBucket & {delete?(key: string): Promise<unknown>};
   IMAGES?: {input(stream: ReadableStream): {transform(options: Record<string, unknown>): {output(options: {format: string; quality: number; anim?: boolean}): Promise<{response(): Response | Promise<Response>}>}}};
 };
-type Row = {id: string; name: string; displayName: string; bio: string; nameColor: string; primaryColor: string; secondaryColor: string; avatarVersion: string | null; joinedAt: number; avatarKey: string | null; avatarType: string | null; bannerVersion: string | null; bannerKey: string | null; bannerType: string | null};
+type Row = {id: string; name: string; displayName: string; bio: string; nameColor: string; primaryColor: string; secondaryColor: string; avatarVersion: string | null; joinedAt: number; avatarKey: string | null; avatarType: string | null; bannerVersion: string | null; bannerKey: string | null; bannerType: string | null;avatarDecoration:ChatAvatarDecoration;nameplateStyle:ChatNameplateStyle;rolesJson:string;isOwner:number};
 type MessageRow = Row & {messageId: number; room: string; authorId: string; text: string; clientId: string; createdAt: number; deleted: number};
 type FriendRow = Row & {friendId: string; sender: string; receiver: string; status: 'pending' | 'accepted'; createdAt: number};
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
-const profileColumns = 'p.account AS id,a.name,p.display_name AS displayName,p.bio,p.name_color AS nameColor,p.primary_color AS primaryColor,p.secondary_color AS secondaryColor,p.avatar_version AS avatarVersion,p.avatar_key AS avatarKey,p.avatar_type AS avatarType,p.banner_version AS bannerVersion,p.banner_key AS bannerKey,p.banner_type AS bannerType,p.joined AS joinedAt';
+const profileColumns = 'p.account AS id,a.username AS name,p.display_name AS displayName,p.bio,p.name_color AS nameColor,p.primary_color AS primaryColor,p.secondary_color AS secondaryColor,p.avatar_version AS avatarVersion,p.avatar_key AS avatarKey,p.avatar_type AS avatarType,p.banner_version AS bannerVersion,p.banner_key AS bannerKey,p.banner_type AS bannerType,p.joined AS joinedAt,p.avatar_decoration AS avatarDecoration,p.nameplate_style AS nameplateStyle,EXISTS(SELECT 1 FROM kkeep_chat_owner co WHERE co.account=p.account) AS isOwner,COALESCE((SELECT json_group_array(json_object(\'id\',id,\'name\',name,\'color\',color,\'position\',position)) FROM (SELECT r.id,r.name,r.color,r.position FROM kkeep_chat_member_roles mr JOIN kkeep_chat_roles r ON r.id=mr.role WHERE mr.account=p.account ORDER BY r.position DESC,r.id LIMIT 8)),\'[]\') AS rolesJson';
 const profileJoin = 'kkeep_chat_profiles p JOIN kkeep_accounts a ON a.id=p.account';
 const messageColumns = 'm.id AS messageId,m.room,m.author AS authorId,m.text,m.client_id AS clientId,m.created AS createdAt,m.deleted,' + profileColumns;
 const messageJoin = 'kkeep_chat_messages m JOIN kkeep_chat_profiles p ON p.account=m.author JOIN kkeep_accounts a ON a.id=p.account';
@@ -33,9 +35,9 @@ class ChatError extends Error {
 const fail = (message: string, status = 400, code = 'invalid_request'): never => {throw new ChatError(message, status, code);};
 const reply = (data: unknown, status = 200) => Response.json(data, {status, headers: jsonHeaders});
 const pair = (a: string, b: string) => [a, b].sort().join(':');
-const user = (row: Row): ChatUser => ({id: row.id, name: row.name, displayName: row.displayName, nameColor: row.nameColor, avatarUrl: row.avatarKey && row.avatarVersion ? '/api/chat/avatar/' + row.id + '?v=' + encodeURIComponent(row.avatarVersion) : null});
+const user = (row: Row): ChatUser => ({id: row.id, username:row.name,name: row.name, displayName: row.displayName, nameColor: row.nameColor, avatarUrl: row.avatarKey && row.avatarVersion ? '/api/chat/avatar/' + row.id + '?v=' + encodeURIComponent(row.avatarVersion) : null,avatarDecoration:row.avatarDecoration,nameplateStyle:row.nameplateStyle,isOwner:!!row.isOwner,roles:JSON.parse(row.rolesJson) as ChatRoleBadge[]});
 const profile = (row: Row): ChatProfile => ({...user(row), bio: row.bio, joinedAt: row.joinedAt, bannerUrl: row.bannerKey && row.bannerVersion ? '/api/chat/banner/' + row.id + '?v=' + encodeURIComponent(row.bannerVersion) : null, primaryColor: row.primaryColor, secondaryColor: row.secondaryColor});
-const message = (row: MessageRow, viewer: string): ChatMessage => ({id: row.messageId, roomId: row.room, author: user(row), text: row.deleted ? '' : row.text, createdAt: row.createdAt, deleted: !!row.deleted, ...(row.authorId === viewer ? {clientId: row.clientId} : {})});
+const message = (row: MessageRow, viewer: string|null): ChatMessage => ({id: row.messageId, roomId: row.room, author: user(row), text: row.deleted ? '' : row.text, createdAt: row.createdAt, deleted: !!row.deleted, ...(row.authorId === viewer ? {clientId: row.clientId} : {})});
 const statement = (db: BrowserDB, sql: string, args: unknown[] = []) => db.prepare(sql).bind(...args);
 async function rows<T>(db: BrowserDB, sql: string, args: unknown[] = []): Promise<T[]> {return (await statement(db, sql, args).all()).results as T[];}
 async function one<T>(db: BrowserDB, sql: string, args: unknown[] = []): Promise<T | undefined> {return (await rows<T>(db, sql, args))[0];}
@@ -57,6 +59,15 @@ function color(value: unknown, fallback: string): string {
   if (value === undefined) return fallback;
   if (typeof value !== 'string' || !/^#[a-f0-9]{6}$/i.test(value)) return fail('Choose a six-digit hex color such as #eeeeee.');
   return value.toLowerCase();
+}
+function choice<T extends string>(value:unknown,allowed:readonly T[],fallback:T):T {
+  if(value===undefined)return fallback;
+  if(typeof value!=='string'||!allowed.includes(value as T))return fail('Choose a valid profile style.');
+  return value as T;
+}
+function assertParticipation(access:ChatAccess,includeTimeout=false) {
+  if(access.banned)return fail('This account is banned from participating in Chat.',403,'chat_banned');
+  if(includeTimeout&&access.timeoutUntil)return fail('This account is timed out until '+new Date(access.timeoutUntil).toISOString()+'.',403,'chat_timeout');
 }
 function channelId(value: unknown): string {
   if (typeof value !== 'string') return fail('Choose a valid channel.');
@@ -121,32 +132,37 @@ function channelFields(input: Record<string, unknown>, current?: ChatChannel) {
   if (input.readOnly !== undefined && typeof input.readOnly !== 'boolean') return fail('Choose a valid channel permission.');
   return {name,category,readOnly: input.readOnly === undefined ? current?.readOnly || false : input.readOnly as boolean};
 }
-function roomAccess(room: string, viewer: string, writing = false, owner = false) {
+function roomAccess(room: string, viewer: string|null, writing = false):ChatSql {
+  if(writing&&!viewer)return {sql:'0',args:[]};
+  const active=viewer?activeSql(viewer,writing):{sql:'1',args:[]};
+  const manager=viewer?permissionSql(viewer,'manage_channels'):{sql:'0',args:[]};
   const builtin = DEFAULT_CHAT_CHANNELS.find(channel => channel.id === room);
   if (builtin) return {
-    sql: 'NOT EXISTS (SELECT 1 FROM kkeep_chat_channels ch WHERE ch.id=? AND ch.archived=1)' + (writing ? ' AND (?=1 OR COALESCE((SELECT read_only FROM kkeep_chat_channels ch WHERE ch.id=?),?)=0)' : ''),
-    args: [room, ...(writing ? [owner ? 1 : 0,room,builtin.readOnly ? 1 : 0] : [])],
+    sql: 'NOT EXISTS (SELECT 1 FROM kkeep_chat_channels ch WHERE ch.id=? AND ch.archived=1)' + (writing ? ' AND '+active.sql+' AND (('+manager.sql+') OR COALESCE((SELECT read_only FROM kkeep_chat_channels ch WHERE ch.id=?),?)=0)' : ''),
+    args: [room, ...(writing ? [...active.args,...manager.args,room,builtin.readOnly ? 1 : 0] : [])],
   };
   if (room.startsWith('channel:')) return {
-    sql: 'EXISTS (SELECT 1 FROM kkeep_chat_channels ch WHERE ch.id=? AND ch.archived=0' + (writing ? ' AND (?=1 OR ch.read_only=0)' : '') + ')',
-    args: [room, ...(writing ? [owner ? 1 : 0] : [])],
+    sql: 'EXISTS (SELECT 1 FROM kkeep_chat_channels ch WHERE ch.id=? AND ch.archived=0' + (writing ? ' AND '+active.sql+' AND (('+manager.sql+') OR ch.read_only=0)' : '') + ')',
+    args: [room, ...(writing ? [...active.args,...manager.args] : [])],
   };
+  if(!viewer)return {sql:'0',args:[]};
   return {
-    sql: "EXISTS (SELECT 1 FROM kkeep_chat_conversations c JOIN kkeep_chat_friends f ON f.pair_key=c.pair_key AND f.status='accepted' WHERE c.id=? AND (c.low=? OR c.high=?) AND " + unblocked('c.low', 'c.high') + ')',
-    args: [room, viewer, viewer],
+    sql: active.sql+" AND EXISTS (SELECT 1 FROM kkeep_chat_conversations c JOIN kkeep_chat_friends f ON f.pair_key=c.pair_key AND f.status='accepted' WHERE c.id=? AND (c.low=? OR c.high=?) AND " + unblocked('c.low', 'c.high') + (writing?' AND NOT EXISTS (SELECT 1 FROM kkeep_chat_moderation cm WHERE cm.account IN (c.low,c.high) AND cm.banned=1)':'')+')',
+    args: [...active.args,room, viewer, viewer],
   };
 }
-async function requireRoom(db: BrowserDB, room: string, viewer: string, writing = false, owner = false) {
-  const access = roomAccess(room, viewer, writing, owner);
+async function requireRoom(db: BrowserDB, room: string, viewer: string|null, writing = false) {
+  const access = roomAccess(room, viewer, writing);
   if (!await one(db, 'SELECT 1 AS allowed WHERE ' + access.sql, access.args)) {
-    if (writing && !owner) {
+    if (writing) {
       const readable = roomAccess(room, viewer);
-      if ((room === 'public' || room.startsWith('channel:')) && await one(db, 'SELECT 1 WHERE ' + readable.sql, readable.args)) return fail('Only the Kkeep owner can post in this channel.', 403, 'owner_required');
+      if ((room === 'public' || room.startsWith('channel:')) && await one(db, 'SELECT 1 WHERE ' + readable.sql, readable.args)) return fail('You do not have permission to post in this channel.', 403, 'permission_required');
     }
     return fail('This channel or conversation is unavailable.', 403, 'conversation_unavailable');
   }
 }
-async function relation(db: BrowserDB, viewer: string, target: string): Promise<{relationship: ChatRelationship; requestId?: string}> {
+async function relation(db: BrowserDB, viewer: string|null, target: string): Promise<{relationship: ChatRelationship; requestId?: string}> {
+  if(!viewer)return {relationship:'none'};
   if (viewer === target) return {relationship: 'self'};
   if (await one(db, 'SELECT 1 FROM kkeep_chat_blocks WHERE (blocker=? AND blocked=?) OR (blocker=? AND blocked=?)', [viewer, target, target, viewer])) return {relationship: 'blocked'};
   const row = await one<{id: string; sender: string; status: string}>(db, 'SELECT id,sender,status FROM kkeep_chat_friends WHERE pair_key=?', [pair(viewer, target)]);
@@ -165,11 +181,11 @@ async function conversations(db: BrowserDB, viewer: string, conversationId?: str
     [viewer, viewer, viewer, ...(conversationId ? [conversationId] : [])]);
   return found.map(row => ({id: row.conversationId, user: user(row), updatedAt: row.updatedAt}));
 }
-async function messageRows(db: BrowserDB, viewer: string, room: string, extra: string, args: unknown[]) {
+async function messageRows(db: BrowserDB, viewer: string|null, room: string, extra: string, args: unknown[]) {
   const access = roomAccess(room, viewer);
   return rows<MessageRow>(db, 'SELECT ' + messageColumns + ' FROM ' + messageJoin + ' WHERE m.room=? AND ' + access.sql + ' AND ' + unblocked('m.author', '?') + ' ' + extra, [room, ...access.args, viewer, viewer, ...args]);
 }
-async function history(db: BrowserDB, viewer: string, url: URL) {
+async function history(db: BrowserDB, viewer: string|null, url: URL) {
   const room = roomId(url.searchParams.get('room') || 'public'), afterValue = url.searchParams.get('after'), beforeValue = url.searchParams.get('before');
   if (afterValue !== null && beforeValue !== null) return fail('Choose older history or new messages.');
   const limit = Math.min(80, Math.max(1, number(url.searchParams.get('limit'), 50)));
@@ -270,7 +286,7 @@ function oldMediaCleanup(db: BrowserDB, current: Row, kind: MediaKind, nextVersi
   if (!old.key || !validMediaKey(old.key, current.id, kind)) return [];
   return [statement(db, 'INSERT OR IGNORE INTO kkeep_chat_avatar_cleanup (key,account,created) SELECT ?,?,? WHERE EXISTS (SELECT 1 FROM kkeep_chat_profiles WHERE account=? AND ' + kind + '_version=?)', [old.key,current.id,Date.now(),current.id,nextVersion])];
 }
-async function profileMedia(request: Request, env: ChatEnv, db: BrowserDB, viewer: string, path: string, kind: MediaKind) {
+async function profileMedia(request: Request, env: ChatEnv, db: BrowserDB, viewer: string|null, path: string, kind: MediaKind) {
   const route = '/' + kind;
   if (request.method === 'GET' && path.startsWith(route + '/')) {
     const target = id(path.slice(route.length + 1)), social = await loadProfile(db, target), media = social ? mediaState(social, kind) : null;
@@ -284,13 +300,14 @@ async function profileMedia(request: Request, env: ChatEnv, db: BrowserDB, viewe
     if (!visible) {await stored.body.cancel(); return fail('Profile image unavailable.',404);}
     return new Response(stored.body, {headers: {...jsonHeaders, 'Content-Type': media.type!, 'Content-Security-Policy': "default-src 'none'; sandbox", 'Content-Disposition': 'inline; filename="profile-' + kind + '.' + extension + '"'}});
   }
+  if(!viewer)return fail('Log in to your Kkeep Profile first.',401,'login_required');
   if (path !== route || !['PUT', 'DELETE'].includes(request.method)) return fail('Method not allowed.', 405);
   await rate(db, kind, viewer, 12, 3600000);
   await cleanMediaObjects(db, env.GAME_ASSETS, viewer);
-  const current = (await loadProfile(db,viewer))!, previous = mediaState(current,kind), version = crypto.randomUUID();
+  const current = (await loadProfile(db,viewer))!, previous = mediaState(current,kind), version = crypto.randomUUID(),eligible=activeSql(viewer);
   if (request.method === 'DELETE') {
     const changes = await db.batch([
-      statement(db, 'UPDATE kkeep_chat_profiles SET ' + kind + '_key=NULL,' + kind + '_type=NULL,' + kind + '_version=?,updated=? WHERE account=? AND ' + kind + '_version IS ?', [version,Date.now(),viewer,previous.version]),
+      statement(db, 'UPDATE kkeep_chat_profiles SET ' + kind + '_key=NULL,' + kind + '_type=NULL,' + kind + '_version=?,updated=? WHERE account=? AND ' + kind + '_version IS ? AND '+eligible.sql, [version,Date.now(),viewer,previous.version,...eligible.args]),
       ...oldMediaCleanup(db,current,kind,version),
     ]) as {meta:{changes:number}}[];
     if (!changes[0]?.meta.changes) return fail('Your profile image changed on another device. Refresh and try again.', 409, 'profile_changed');
@@ -333,13 +350,44 @@ async function profileMedia(request: Request, env: ChatEnv, db: BrowserDB, viewe
   try {
     await env.GAME_ASSETS.put(key,new Blob([output]).stream(),{httpMetadata:{contentType:safeType},customMetadata:{type:safeType}});
     const changes = await db.batch([
-      statement(db,'UPDATE kkeep_chat_profiles SET ' + kind + '_key=?,' + kind + '_type=?,' + kind + '_version=?,updated=? WHERE account=? AND ' + kind + '_version IS ?',[key,safeType,version,Date.now(),viewer,previous.version]),
+      statement(db,'UPDATE kkeep_chat_profiles SET ' + kind + '_key=?,' + kind + '_type=?,' + kind + '_version=?,updated=? WHERE account=? AND ' + kind + '_version IS ? AND '+eligible.sql,[key,safeType,version,Date.now(),viewer,previous.version,...eligible.args]),
       ...oldMediaCleanup(db,current,kind,version),
     ]) as {meta:{changes:number}}[];
     if (!changes[0]?.meta.changes) return fail('Your profile image changed on another device. Refresh and try again.',409,'profile_changed');
   } catch(error) {await abandonMedia(db,env.GAME_ASSETS,viewer,key);throw error;}
   await cleanMediaObjects(db,env.GAME_ASSETS,viewer);
   return reply({profile:profile((await loadProfile(db,viewer))!)});
+}
+
+function roleFields(input:Record<string,unknown>,current?:ChatRole) {
+  const name=input.name===undefined?current?.name:text(input.name,32,'A role name');
+  if(!name||/[<>]/.test(name)||name.toLowerCase()==='owner')return fail('Choose a role name other than Owner, using 1–32 plain characters.');
+  const roleColor=color(input.color,current?.color||'#91a9ff');
+  const permissions=input.permissions===undefined?current?.permissions||[]:input.permissions;
+  if(!Array.isArray(permissions)||permissions.length>CHAT_PERMISSIONS.length||permissions.some(value=>typeof value!=='string'||!CHAT_PERMISSIONS.includes(value as ChatPermission))||new Set(permissions).size!==permissions.length)return fail('Choose valid role permissions.');
+  const position=input.position===undefined?current?.position||1:input.position;
+  if(!Number.isInteger(position)||Number(position)<1||Number(position)>9999)return fail('Role position must be between 1 and 9999.');
+  return {name,color:roleColor,position:Number(position),permissions:permissions as ChatPermission[]};
+}
+async function may(db:BrowserDB,grant:ChatSql):Promise<boolean> {return !!await one(db,'SELECT 1 WHERE '+grant.sql,grant.args);}
+function managed(access:ChatAccess) {return access.canManageRoles||access.permissions.some(permission=>['timeout_members','ban_members'].includes(permission));}
+function managementSql(actor:string):ChatSql {
+  const timeout=permissionSql(actor,'timeout_members'),ban=permissionSql(actor,'ban_members');
+  return {sql:'(('+timeout.sql+') OR ('+ban.sql+'))',args:[...timeout.args,...ban.args]};
+}
+function moderationState(row:{banned:number;timeoutUntil:number|null}) {return {banned:!!row.banned,timeoutUntil:row.timeoutUntil&&row.timeoutUntil>Date.now()?row.timeoutUntil:null};}
+async function memberModeration(db:BrowserDB,actor:string,target:string) {
+  const timeout=moderationSql(actor,'p.account','timeout_members'),ban=moderationSql(actor,'p.account','ban_members'),management=managementSql(actor);
+  const found=await one<{banned:number;timeoutUntil:number|null;canTimeout:number;canBan:number}>(db,'SELECT COALESCE(cm.banned,0) AS banned,cm.timeout_until AS timeoutUntil,('+timeout.sql+') AS canTimeout,('+ban.sql+') AS canBan FROM kkeep_chat_profiles p LEFT JOIN kkeep_chat_moderation cm ON cm.account=p.account WHERE p.account=? AND '+management.sql,[...timeout.args,...ban.args,target,...management.args]);
+  if(!found){if(!await may(db,management))return fail('Your member-management permission changed. Refresh and try again.',403,'permission_changed');return fail('This member is unavailable.',404);}
+  return {moderation:moderationState(found),canTimeout:!!found.canTimeout,canBan:!!found.canBan};
+}
+async function people(db:BrowserDB,viewer:string|null,url:URL) {
+  const query=(url.searchParams.get('q')||'').normalize('NFKC').trim();
+  if(query.length>60)return fail('Search using up to 60 characters.');
+  const escaped=normalizeText(query).replace(/[\\%_]/g,character=>'\\'+character);
+  const found=await rows<Row & {friendId:string|null;friendSender:string|null;friendStatus:string|null}>(db,'SELECT '+profileColumns+',f.id AS friendId,f.sender AS friendSender,f.status AS friendStatus FROM '+profileJoin+' LEFT JOIN kkeep_chat_friends f ON f.pair_key=CASE WHEN p.account<? THEN p.account || ? ELSE ? || p.account END WHERE (? IS NULL OR p.account<>?) AND '+unblocked('p.account','?')+' AND NOT EXISTS (SELECT 1 FROM kkeep_chat_moderation cm WHERE cm.account=p.account AND cm.banned=1)'+(query?" AND (p.search_key LIKE ? ESCAPE '\\' OR a.username LIKE ? ESCAPE '\\')":'')+' ORDER BY p.joined DESC,p.account LIMIT 30',[viewer,viewer?':'+viewer:null,viewer?viewer+':':null,viewer,viewer,viewer,viewer,...(query?['%'+escaped+'%','%'+escaped+'%']:[])]);
+  return reply({people:found.map(row=>({...user(row),relationship:row.friendStatus==='accepted'?'friends':row.friendId?row.friendSender===viewer?'outgoing':'incoming':'none',...(row.friendId?{requestId:row.friendId}:{})}))});
 }
 
 export async function chatApi(request: Request, env: ChatEnv): Promise<Response> {
@@ -349,74 +397,168 @@ export async function chatApi(request: Request, env: ChatEnv): Promise<Response>
   if (!env.DB) return reply({error: 'Chat is temporarily unavailable.', code: 'storage_unavailable'}, 503);
   const db = env.DB;
   try {
-    const account = await profileIdentity(request, db);
-    const owner = analyticsOwner(request, env);
+    const account = await profileIdentity(request, db),ownerAccount=await chatOwnerAccount(db);
+    const access=await chatAccess(db,account?.id||null,ownerAccount,!!account&&!ownerAccount&&analyticsOwner(request,env));
+    const viewerId=account?.id||null;
     if (path === '/channels' && request.method === 'GET') return reply({
-      channels: await channelList(db),canManageChannels: owner,ownerConfigured: !!env.KKEEP_ANALYTICS_OWNER_EMAIL?.trim(),ownerSignedIn: !!request.headers.get('oai-authenticated-user-email'),
+      channels: await channelList(db),canManageChannels: access.permissions.includes('manage_channels'),ownerConfigured: !!ownerAccount||!!env.KKEEP_ANALYTICS_OWNER_EMAIL?.trim(),ownerSignedIn: access.isOwner||analyticsOwner(request,env),
     });
     if (path === '/session' && request.method === 'GET') {
       const social = account ? await loadProfile(db, account.id) : undefined;
-      const total = account ? await one<{count: number}>(db, 'SELECT COUNT(*) AS count FROM kkeep_chat_profiles') : undefined;
-      return reply({account: account || null, profile: social ? profile(social) : null, memberCount: total?.count || 0});
+      const total = await one<{count: number}>(db, 'SELECT COUNT(*) AS count FROM kkeep_chat_profiles');
+      return reply({account: account || null, profile: social ? profile(social) : null, memberCount: total?.count || 0,access});
+    }
+    if(request.method==='GET') {
+      const readKey=viewerId||'guest:'+await digest(request.headers.get('CF-Connecting-IP')||'local-preview');
+      await rate(db,'read',readKey,viewerId?240:1200,60000);
+      if(isMediaRead)return await profileMedia(request,env,db,viewerId,path,path.startsWith('/avatar/')?'avatar':'banner');
+      if(path==='/profile') {
+        const target=url.searchParams.has('id')?id(url.searchParams.get('id')):viewerId;
+        if(!target)return fail('Choose a public profile to view.',401,'login_required');
+        const found=await loadProfile(db,target),relationship=await relation(db,viewerId,target);
+        if(!found||relationship.relationship==='blocked')return fail('This profile is unavailable.',404);
+        return reply({profile:profile(found),...relationship});
+      }
+      if(path==='/people') {await rate(db,'people',readKey,60,60000);return await people(db,viewerId,url);}
+      if(path==='/roles')return reply({roles:await roleList(db),canManageRoles:access.canManageRoles});
+      if(path==='/messages') {
+        const room=roomId(url.searchParams.get('room')||'public');
+        if(room==='public'||room.startsWith('channel:'))return await history(db,viewerId,url);
+      }
+    }
+    if(path==='/owner/claim'&&request.method==='POST') {
+      if(!account)return fail('Log in to your Kkeep Profile first.',401,'login_required');
+      if(ownerAccount)return ownerAccount===account.id?reply({ok:true,access}):fail('The owner account is already linked.',409,'owner_bound');
+      if(!access.canClaimOwner)return fail('Verify the site owner sign-in before linking an account.',403,'owner_required');
+      await rate(db,'owner-claim',account.id,5,3600000);
+      await statement(db,'INSERT OR IGNORE INTO kkeep_chat_owner (id,account,created) VALUES (1,?,?)',[account.id,Date.now()]).run();
+      const bound=await chatOwnerAccount(db);
+      if(bound!==account.id)return fail('The owner account is already linked.',409,'owner_bound');
+      return reply({ok:true,access:await chatAccess(db,account.id,bound)});
     }
     if (!account) return fail('Log in to your Kkeep Profile first.', 401, 'login_required');
     const viewer = account.id;
     let social = await loadProfile(db, viewer);
+    assertParticipation(access);
     if (path === '/join' && request.method === 'POST') {
       const input = await body(request);
       if (!social) {
         await rate(db, 'join', viewer, 5, 600000);
         const name = input.displayName === undefined ? account.name : displayName(input.displayName);
         const bio = input.bio === undefined ? '' : text(input.bio, CHAT_BIO_MAX, 'Your bio', false), now = Date.now();
-        await statement(db, 'INSERT OR IGNORE INTO kkeep_chat_profiles (account,display_name,search_key,bio,joined,updated) VALUES (?,?,?,?,?,?)', [viewer, name, normalizeText(name + ' ' + account.name), bio, now, now]).run();
+        await statement(db, 'INSERT OR IGNORE INTO kkeep_chat_profiles (account,display_name,search_key,bio,joined,updated) SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM kkeep_accounts a WHERE a.id=? AND a.username=?)', [viewer, name, normalizeText(name + ' ' + account.username), bio, now, now,viewer,account.username]).run();
         social = await loadProfile(db, viewer);
+        if(!social)return fail('Your username changed on another device. Refresh and join again.',409,'profile_changed');
       }
       return reply({profile: profile(social!)});
     }
     if (!social) return fail('Join Chat with your Kkeep Profile first.', 403, 'join_required');
+    if(path==='/members'&&request.method==='GET') {
+      if(!managed(access))return fail('You do not have permission to manage members.',403,'permission_required');
+      const query=(url.searchParams.get('q')||'').normalize('NFKC').trim();
+      if(query.length>60)return fail('Search using up to 60 characters.');
+      const escaped=normalizeText(query).replace(/[\\%_]/g,character=>'\\'+character),timeout=moderationSql(viewer,'p.account','timeout_members'),ban=moderationSql(viewer,'p.account','ban_members'),management=managementSql(viewer);
+      const found=await rows<Row & {banned:number;timeoutUntil:number|null;canTimeout:number;canBan:number}>(db,'SELECT '+profileColumns+',COALESCE(cm.banned,0) AS banned,cm.timeout_until AS timeoutUntil,('+timeout.sql+') AS canTimeout,('+ban.sql+') AS canBan FROM '+profileJoin+' LEFT JOIN kkeep_chat_moderation cm ON cm.account=p.account WHERE '+management.sql+(query?" AND (p.search_key LIKE ? ESCAPE '\\' OR a.username LIKE ? ESCAPE '\\')":'')+' ORDER BY COALESCE(cm.banned,0) DESC,p.joined DESC,p.account LIMIT 50',[...timeout.args,...ban.args,...management.args,...(query?['%'+escaped+'%','%'+escaped+'%']:[])]);
+      if(!found.length&&!await may(db,management))return fail('Your member-management permission changed. Refresh and try again.',403,'permission_changed');
+      return reply({members:found.map(row=>({user:user(row),moderation:moderationState(row),canTimeout:!!row.canTimeout,canBan:!!row.canBan}))});
+    }
+    if(path.startsWith('/members/')&&path.endsWith('/moderation')&&['GET','POST'].includes(request.method)) {
+      if(!managed(access))return fail('You do not have permission to manage members.',403,'permission_required');
+      const target=id(path.slice('/members/'.length,-'/moderation'.length));
+      if(request.method==='GET')return reply(await memberModeration(db,viewer,target));
+      const input=await body(request),action=input.action;
+      if(!['timeout','untimeout','ban','unban'].includes(String(action)))return fail('Choose a valid moderation action.');
+      const permission:ChatPermission=action==='timeout'||action==='untimeout'?'timeout_members':'ban_members';
+      const duration=input.durationMinutes;
+      if(action==='timeout'&&(!Number.isInteger(duration)||Number(duration)<1||Number(duration)>40320))return fail('Choose a timeout between 1 minute and 28 days.');
+      const reason=input.reason===undefined?'':text(input.reason,256,'A moderation reason',false),grant=moderationSql(viewer,'p.account',permission);
+      if(!await one(db,'SELECT 1 FROM kkeep_chat_profiles p WHERE p.account=? AND '+grant.sql,[target,...grant.args]))return fail('You can only moderate members below your highest role.',403,'hierarchy_required');
+      await rate(db,'moderation',viewer,40,60000);
+      const now=Date.now(),timeout=action==='timeout'?now+Number(duration)*60000:null;
+      const bannedValue=action==='ban'?'1':action==='unban'?'0':'COALESCE(cm.banned,0)';
+      const timeoutValue=action==='timeout'?'?':action==='untimeout'||action==='ban'?'NULL':'cm.timeout_until';
+      const changed=await statement(db,'INSERT INTO kkeep_chat_moderation (account,banned,timeout_until,reason,updated_by,updated) SELECT p.account,'+bannedValue+','+timeoutValue+',?,?,? FROM kkeep_chat_profiles p LEFT JOIN kkeep_chat_moderation cm ON cm.account=p.account WHERE p.account=? AND '+grant.sql+' ON CONFLICT(account) DO UPDATE SET banned=excluded.banned,timeout_until=excluded.timeout_until,reason=excluded.reason,updated_by=excluded.updated_by,updated=excluded.updated',[...(action==='timeout'?[timeout]:[]),reason,viewer,now,target,...grant.args]).run();
+      if(!changed.meta.changes)return fail('Your permission or this member’s role changed. Refresh and try again.',403,'permission_changed');
+      return reply(await memberModeration(db,viewer,target));
+    }
+    if(path==='/roles'&&request.method==='POST') {
+      if(!access.canManageRoles)return fail('Only the owner can define roles.',403,'owner_required');
+      const existing=await roleList(db),input=await body(request);
+      if(existing.length>=50)return fail('Delete a role before adding another.',409);
+      const fields=roleFields({...input,position:input.position??Math.min(9999,(existing[0]?.position||0)+10)}),role={id:crypto.randomUUID(),...fields},now=Date.now(),grant=ownerSql(viewer);
+      await rate(db,'roles',viewer,60,60000);
+      const changed=await statement(db,'INSERT INTO kkeep_chat_roles (id,name,color,position,permissions,created,updated) SELECT ?,?,?,?,?,?,? WHERE '+grant.sql+' AND (SELECT COUNT(*) FROM kkeep_chat_roles)<50',[role.id,role.name,role.color,role.position,role.permissions.reduce((mask,item)=>mask|permissionBits[item],0),now,now,...grant.args]).run();
+      if(!changed.meta.changes)return fail('The role list changed. Refresh and try again.',409,'roles_changed');
+      return reply({role},201);
+    }
+    if(path.startsWith('/roles/')&&['PATCH','DELETE'].includes(request.method)) {
+      if(!access.canManageRoles)return fail('Only the owner can define roles.',403,'owner_required');
+      const target=id(path.slice('/roles/'.length)),current=(await roleList(db)).find(role=>role.id===target),grant=ownerSql(viewer);
+      if(!current)return fail('This role is unavailable.',404);
+      await rate(db,'roles',viewer,60,60000);
+      if(request.method==='DELETE') {
+        const changed=await db.batch([
+          statement(db,'DELETE FROM kkeep_chat_member_roles WHERE role=? AND '+grant.sql,[target,...grant.args]),
+          statement(db,'DELETE FROM kkeep_chat_roles WHERE id=? AND '+grant.sql,[target,...grant.args]),
+        ]) as {meta:{changes:number}}[];
+        if(!changed[1]?.meta.changes)return fail('This role changed. Refresh and try again.',409,'roles_changed');
+        return reply({ok:true});
+      }
+      const fields=roleFields(await body(request),current);
+      const changed=await statement(db,'UPDATE kkeep_chat_roles SET name=?,color=?,position=?,permissions=?,updated=? WHERE id=? AND '+grant.sql,[fields.name,fields.color,fields.position,fields.permissions.reduce((mask,item)=>mask|permissionBits[item],0),Date.now(),target,...grant.args]).run();
+      if(!changed.meta.changes)return fail('This role changed. Refresh and try again.',409,'roles_changed');
+      return reply({role:{id:target,...fields}});
+    }
+    if(path.startsWith('/members/')&&path.endsWith('/roles')&&request.method==='PUT') {
+      if(!access.canManageRoles)return fail('Only the owner can assign roles.',403,'owner_required');
+      const target=id(path.slice('/members/'.length,-'/roles'.length)),input=await body(request);
+      if(!Array.isArray(input.roleIds)||input.roleIds.length>8)return fail('Choose up to 8 roles.');
+      const ids=input.roleIds.map(id);if(new Set(ids).size!==ids.length)return fail('Choose each role once.');
+      if(!await loadProfile(db,target))return fail('This member is unavailable.',404);
+      const grant=ownerSql(viewer),valid=ids.length?' AND (SELECT COUNT(*) FROM kkeep_chat_roles WHERE id IN ('+ids.map(()=>'?').join(',')+'))=?':'',args=[...grant.args,...ids,...(ids.length?[ids.length]:[])],now=Date.now();
+      await rate(db,'roles',viewer,60,60000);
+      const guard=grant.sql+valid;
+      const changed=await db.batch([
+        statement(db,'UPDATE kkeep_chat_profiles SET updated=? WHERE account=? AND '+guard,[now,target,...args]),
+        statement(db,'DELETE FROM kkeep_chat_member_roles WHERE account=? AND '+guard,[target,...args]),
+        ...ids.map(role=>statement(db,'INSERT OR IGNORE INTO kkeep_chat_member_roles (account,role,created) SELECT ?,?,? WHERE '+guard,[target,role,now,...args])),
+      ]) as {meta:{changes:number}}[];
+      if(!changed[0]?.meta.changes)return fail('A selected role changed. Refresh and try again.',409,'roles_changed');
+      return reply({profile:profile((await loadProfile(db,target))!)});
+    }
     if (path.startsWith('/avatar')) return await profileMedia(request, env, db, viewer, path, 'avatar');
     if (path.startsWith('/banner')) return await profileMedia(request, env, db, viewer, path, 'banner');
     if (path === '/channels' && request.method === 'POST') {
-      if (!owner) return fail('Only the Kkeep owner can manage channels.', 403, 'owner_required');
+      const grant=permissionSql(viewer,'manage_channels');
+      if (!await may(db,grant)) return fail('You do not have permission to manage channels.', 403, 'permission_required');
       const input = await body(request), fields = channelFields(input);
       await rate(db, 'channel-management', viewer, 40, 60000);
       if ((await channelList(db)).length >= 100) return fail('Archive a channel before adding another.', 409);
       const channel: ChatChannel = {id: 'channel:' + crypto.randomUUID(),...fields}, now = Date.now();
-      await statement(db, 'INSERT INTO kkeep_chat_channels (id,name,category,read_only,archived,created_by,created,updated) VALUES (?,?,?,?,0,?,?,?)', [channel.id,channel.name,channel.category,channel.readOnly ? 1 : 0,viewer,now,now]).run();
+      const changed=await statement(db, 'INSERT INTO kkeep_chat_channels (id,name,category,read_only,archived,created_by,created,updated) SELECT ?,?,?,?,0,?,?,? WHERE '+grant.sql, [channel.id,channel.name,channel.category,channel.readOnly ? 1 : 0,viewer,now,now,...grant.args]).run();
+      if(!changed.meta.changes)return fail('Your channel permission changed. Refresh and try again.',403,'permission_changed');
       return reply({channel}, 201);
     }
     if (path.startsWith('/channels/') && ['PATCH','DELETE'].includes(request.method)) {
-      if (!owner) return fail('Only the Kkeep owner can manage channels.', 403, 'owner_required');
+      const grant=permissionSql(viewer,'manage_channels');
+      if (!await may(db,grant)) return fail('You do not have permission to manage channels.', 403, 'permission_required');
       const target = channelId(path.slice('/channels/'.length)), current = (await channelList(db)).find(channel => channel.id === target);
       if (!current) return fail('This channel is unavailable.', 404);
       const fields = request.method === 'DELETE' ? current : channelFields(await body(request), current), now = Date.now();
       await rate(db, 'channel-management', viewer, 40, 60000);
-      const changed = await statement(db, 'INSERT INTO kkeep_chat_channels (id,name,category,read_only,archived,created_by,created,updated) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,category=excluded.category,read_only=excluded.read_only,archived=excluded.archived,updated=excluded.updated WHERE kkeep_chat_channels.archived=0', [target,fields.name,fields.category,fields.readOnly ? 1 : 0,request.method === 'DELETE' ? 1 : 0,viewer,now,now]).run();
+      const changed = await statement(db, 'INSERT INTO kkeep_chat_channels (id,name,category,read_only,archived,created_by,created,updated) SELECT ?,?,?,?,?,?,?,? WHERE '+grant.sql+' ON CONFLICT(id) DO UPDATE SET name=excluded.name,category=excluded.category,read_only=excluded.read_only,archived=excluded.archived,updated=excluded.updated WHERE kkeep_chat_channels.archived=0 AND '+grant.sql, [target,fields.name,fields.category,fields.readOnly ? 1 : 0,request.method === 'DELETE' ? 1 : 0,viewer,now,now,...grant.args,...grant.args]).run();
       if (!changed.meta.changes) return fail('This channel was archived on another device. Refresh the channel list.', 409, 'channel_changed');
       return request.method === 'DELETE' ? reply({ok: true}) : reply({channel: {id: target,...fields}});
-    }
-    if (request.method === 'GET') await rate(db, 'read', viewer, 240, 60000);
-
-    if (path === '/profile' && request.method === 'GET') {
-      const target = url.searchParams.has('id') ? id(url.searchParams.get('id')) : viewer, found = await loadProfile(db, target), relationship = await relation(db, viewer, target);
-      if (!found || relationship.relationship === 'blocked') return fail('This profile is unavailable.', 404);
-      return reply({profile: profile(found), ...relationship});
     }
     if (path === '/profile' && request.method === 'PATCH') {
       const input = await body(request), name = input.displayName === undefined ? social.displayName : displayName(input.displayName), bio = input.bio === undefined ? social.bio : text(input.bio, CHAT_BIO_MAX, 'Your bio', false);
       const nameColor = color(input.nameColor,social.nameColor), primaryColor = color(input.primaryColor,social.primaryColor), secondaryColor = color(input.secondaryColor,social.secondaryColor);
+      const avatarDecoration=choice(input.avatarDecoration,CHAT_AVATAR_DECORATIONS,social.avatarDecoration),nameplateStyle=choice(input.nameplateStyle,CHAT_NAMEPLATE_STYLES,social.nameplateStyle);
       await rate(db, 'profile', viewer, 30, 3600000);
-      await statement(db, 'UPDATE kkeep_chat_profiles SET display_name=?,search_key=?,bio=?,name_color=?,primary_color=?,secondary_color=?,updated=? WHERE account=?', [name, normalizeText(name + ' ' + account.name), bio, nameColor, primaryColor, secondaryColor, Date.now(), viewer]).run();
+      const eligible=activeSql(viewer);
+      const changed=await statement(db, 'UPDATE kkeep_chat_profiles SET display_name=?,search_key=?,bio=?,name_color=?,primary_color=?,secondary_color=?,avatar_decoration=?,nameplate_style=?,updated=? WHERE account=? AND EXISTS(SELECT 1 FROM kkeep_accounts a WHERE a.id=? AND a.username=?) AND '+eligible.sql, [name, normalizeText(name + ' ' + account.username), bio, nameColor, primaryColor, secondaryColor,avatarDecoration,nameplateStyle, Date.now(), viewer,viewer,account.username,...eligible.args]).run();
+      if(!changed.meta.changes)return fail('Your username changed on another device. Refresh and try again.',409,'profile_changed');
       return reply({profile: profile((await loadProfile(db, viewer))!)});
-    }
-    if (path === '/people' && request.method === 'GET') {
-      await rate(db, 'people', viewer, 60, 60000);
-      const query = (url.searchParams.get('q') || '').normalize('NFKC').trim();
-      if (query.length > 60) return fail('Search using up to 60 characters.');
-      const escaped = normalizeText(query).replace(/[\\%_]/g, character => '\\' + character);
-      const found = await rows<Row & {friendId: string | null; friendSender: string | null; friendStatus: string | null}>(db, 'SELECT ' + profileColumns + ',f.id AS friendId,f.sender AS friendSender,f.status AS friendStatus FROM ' + profileJoin + ' LEFT JOIN kkeep_chat_friends f ON f.pair_key=CASE WHEN p.account<? THEN p.account || ? ELSE ? || p.account END WHERE p.account<>? AND ' + unblocked('p.account', '?') + (query ? " AND p.search_key LIKE ? ESCAPE '\\'" : '') + ' ORDER BY p.joined DESC,p.account LIMIT 30', [viewer, ':' + viewer, viewer + ':', viewer, viewer, viewer, ...(query ? ['%' + escaped + '%'] : [])]);
-      const people = found.map(row => ({...user(row), relationship: row.friendStatus === 'accepted' ? 'friends' : row.friendId ? row.friendSender === viewer ? 'outgoing' : 'incoming' : 'none', ...(row.friendId ? {requestId: row.friendId} : {})}));
-      return reply({people});
     }
     if (path === '/friends' && request.method === 'GET') {
       const found = await rows<FriendRow>(db, 'SELECT f.id AS friendId,f.sender,f.receiver,f.status,f.created AS createdAt,' + profileColumns + ' FROM kkeep_chat_friends f JOIN kkeep_chat_profiles p ON p.account=CASE WHEN f.sender=? THEN f.receiver ELSE f.sender END JOIN kkeep_accounts a ON a.id=p.account WHERE (f.sender=? OR f.receiver=?) AND ' + unblocked('f.sender', 'f.receiver') + ' ORDER BY f.updated DESC LIMIT 500', [viewer, viewer, viewer]);
@@ -424,6 +566,7 @@ export async function chatApi(request: Request, env: ChatEnv): Promise<Response>
       return reply({friends: items.filter(item => item.status === 'accepted'), incoming: items.filter(item => item.status === 'pending' && item.direction === 'incoming'), outgoing: items.filter(item => item.status === 'pending' && item.direction === 'outgoing')});
     }
     if (path === '/friends' && request.method === 'POST') {
+      assertParticipation(access,true);
       const input = await body(request), target = id(input.accountId);
       await targetProfile(db, viewer, target);
       const current = await relation(db, viewer, target);
@@ -432,7 +575,8 @@ export async function chatApi(request: Request, env: ChatEnv): Promise<Response>
       if (current.requestId) return reply({ok: true, id: current.requestId});
       await rate(db, 'friend-request', viewer, 10, 900000); await rate(db, 'friend-day', viewer, 40, 86400000);
       const friendId = crypto.randomUUID(), now = Date.now();
-      await statement(db, "INSERT OR IGNORE INTO kkeep_chat_friends (id,pair_key,sender,receiver,status,created,updated) SELECT ?,?,?,?,'pending',?,? WHERE " + unblocked('?', '?'), [friendId, pair(viewer, target), viewer, target, now, now, viewer, target, target, viewer]).run();
+      const eligible=activeSql(viewer,true),targetActive=activeSql(target);
+      await statement(db, "INSERT OR IGNORE INTO kkeep_chat_friends (id,pair_key,sender,receiver,status,created,updated) SELECT ?,?,?,?,'pending',?,? WHERE " + unblocked('?', '?')+' AND '+eligible.sql+' AND '+targetActive.sql, [friendId, pair(viewer, target), viewer, target, now, now, viewer, target, target, viewer,...eligible.args,...targetActive.args]).run();
       const updated = await relation(db, viewer, target);
       if (!updated.requestId) return fail('This player is unavailable.', 403);
       return reply({ok: true, id: updated.requestId});
@@ -443,8 +587,10 @@ export async function chatApi(request: Request, env: ChatEnv): Promise<Response>
       if (!found) return fail('This friend request is unavailable.', 404);
       await rate(db, 'friend-actions', viewer, 60, 60000);
       if (action === 'accept') {
+        assertParticipation(access,true);
         if (found.receiver !== viewer) return fail('Only the recipient can accept this request.', 403);
-        const changed = await statement(db, "UPDATE kkeep_chat_friends SET status='accepted',updated=? WHERE id=? AND receiver=? AND status IN ('pending','accepted') AND " + unblocked('sender', 'receiver'), [Date.now(), friendId, viewer]).run();
+        const eligible=activeSql(viewer,true);
+        const changed = await statement(db, "UPDATE kkeep_chat_friends SET status='accepted',updated=? WHERE id=? AND receiver=? AND status IN ('pending','accepted') AND " + unblocked('sender', 'receiver')+' AND '+eligible.sql+' AND NOT EXISTS(SELECT 1 FROM kkeep_chat_moderation cm WHERE cm.account IN(sender,receiver) AND cm.banned=1)', [Date.now(), friendId, viewer,...eligible.args]).run();
         if (!changed.meta.changes) return fail('This request is no longer available.', 409);
       } else if (action === 'decline' || action === 'cancel' || action === 'remove') {
         const condition = action === 'decline' ? "receiver=? AND status='pending'" : action === 'cancel' ? "sender=? AND status='pending'" : "status='accepted' AND (sender=? OR receiver=?)";
@@ -455,10 +601,12 @@ export async function chatApi(request: Request, env: ChatEnv): Promise<Response>
     }
     if (path === '/conversations' && request.method === 'GET') return reply({conversations: await conversations(db, viewer)});
     if (path === '/conversations' && request.method === 'POST') {
+      assertParticipation(access,true);
       const input = await body(request), target = id(input.accountId); await targetProfile(db, viewer, target);
       await rate(db, 'conversation', viewer, 40, 60000);
       const pairKey = pair(viewer, target), [low, high] = [viewer, target].sort(), now = Date.now();
-      await statement(db, 'INSERT OR IGNORE INTO kkeep_chat_conversations (id,pair_key,low,high,created,updated) SELECT ?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM kkeep_chat_friends f WHERE f.pair_key=? AND f.status=\'accepted\' AND ' + unblocked('f.sender', 'f.receiver') + ')', [crypto.randomUUID(), pairKey, low, high, now, now, pairKey]).run();
+      const eligible=activeSql(viewer,true),targetActive=activeSql(target);
+      await statement(db, 'INSERT OR IGNORE INTO kkeep_chat_conversations (id,pair_key,low,high,created,updated) SELECT ?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM kkeep_chat_friends f WHERE f.pair_key=? AND f.status=\'accepted\' AND ' + unblocked('f.sender', 'f.receiver') + ') AND '+eligible.sql+' AND '+targetActive.sql, [crypto.randomUUID(), pairKey, low, high, now, now, pairKey,...eligible.args,...targetActive.args]).run();
       const existing = await one<{id: string}>(db, 'SELECT id FROM kkeep_chat_conversations WHERE pair_key=?', [pairKey]);
       const conversation = existing ? (await conversations(db, viewer, existing.id))[0] : undefined;
       if (!conversation) return fail('Add this player as a friend before sending a private message.', 403, 'friends_required');
@@ -466,8 +614,9 @@ export async function chatApi(request: Request, env: ChatEnv): Promise<Response>
     }
     if (path === '/messages' && request.method === 'GET') return await history(db, viewer, url);
     if (path === '/messages' && request.method === 'POST') {
+      assertParticipation(access,true);
       const input = await body(request), room = roomId(input.roomId), clientId = id(input.clientId), content = text(input.text, CHAT_MESSAGE_MAX, 'Your message');
-      await requireRoom(db, room, viewer, true, owner);
+      await requireRoom(db, room, viewer, true);
       const existing = await one<{room: string; text: string}>(db, 'SELECT room,text FROM kkeep_chat_messages WHERE author=? AND client_id=?', [viewer, clientId]);
       if (existing) {
         if (existing.room !== room || existing.text !== content) return fail('This send ID was already used. Start a new message.', 409, 'idempotency_conflict');
@@ -476,10 +625,10 @@ export async function chatApi(request: Request, env: ChatEnv): Promise<Response>
         return reply({message: message(found, viewer)});
       }
       await rate(db, 'send', viewer, 30, 60000); await rate(db, 'send-day', viewer, 1200, 86400000);
-      const access = roomAccess(room, viewer, true, owner), now = Date.now();
+      const roomGrant = roomAccess(room, viewer, true), now = Date.now();
       await db.batch([
-        statement(db, 'INSERT OR IGNORE INTO kkeep_chat_messages (room,author,text,client_id,created,deleted) SELECT ?,?,?,?,?,0 WHERE ' + access.sql, [room, viewer, content, clientId, now, ...access.args]),
-        statement(db, "INSERT OR IGNORE INTO kkeep_chat_events (room,message,kind) SELECT room,id,'created' FROM kkeep_chat_messages WHERE author=? AND client_id=? AND room=? AND " + access.sql, [viewer, clientId, room, ...access.args]),
+        statement(db, 'INSERT OR IGNORE INTO kkeep_chat_messages (room,author,text,client_id,created,deleted) SELECT ?,?,?,?,?,0 WHERE ' + roomGrant.sql, [room, viewer, content, clientId, now, ...roomGrant.args]),
+        statement(db, "INSERT OR IGNORE INTO kkeep_chat_events (room,message,kind) SELECT room,id,'created' FROM kkeep_chat_messages WHERE author=? AND client_id=? AND room=? AND " + roomGrant.sql, [viewer, clientId, room, ...roomGrant.args]),
         statement(db, 'UPDATE kkeep_chat_conversations SET updated=? WHERE id=? AND EXISTS (SELECT 1 FROM kkeep_chat_messages WHERE author=? AND client_id=? AND room=?)', [now, room, viewer, clientId, room]),
       ]);
       const found = (await messageRows(db, viewer, room, 'AND m.author=? AND m.client_id=?', [viewer, clientId]))[0];
@@ -489,12 +638,15 @@ export async function chatApi(request: Request, env: ChatEnv): Promise<Response>
     }
     if (path.startsWith('/messages/') && request.method === 'DELETE') {
       const messageId = number(path.slice('/messages/'.length));
-      if (!await one(db, 'SELECT id FROM kkeep_chat_messages WHERE id=? AND author=?', [messageId, viewer])) return fail('This message is unavailable.', 404);
+      const grant=moderationSql(viewer,'kkeep_chat_messages.author','delete_messages'),eligible=activeSql(viewer);
+      const authorization='('+eligible.sql+' AND author=? OR ((room=\'public\' OR room LIKE \'channel:%\') AND '+grant.sql+'))',args=[...eligible.args,viewer,...grant.args];
+      if (!await one(db, 'SELECT id FROM kkeep_chat_messages WHERE id=? AND '+authorization, [messageId,...args])) return fail('This message is unavailable.', 404);
       await rate(db, 'delete', viewer, 60, 60000);
-      await db.batch([
-        statement(db, "UPDATE kkeep_chat_messages SET text='',deleted=1 WHERE id=? AND author=?", [messageId, viewer]),
-        statement(db, "INSERT OR IGNORE INTO kkeep_chat_events (room,message,kind) SELECT room,id,'deleted' FROM kkeep_chat_messages WHERE id=? AND author=? AND deleted=1", [messageId, viewer]),
-      ]);
+      const changed=await db.batch([
+        statement(db, "UPDATE kkeep_chat_messages SET text='',deleted=1 WHERE id=? AND "+authorization, [messageId,...args]),
+        statement(db, "INSERT OR IGNORE INTO kkeep_chat_events (room,message,kind) SELECT room,id,'deleted' FROM kkeep_chat_messages WHERE id=? AND deleted=1 AND "+authorization, [messageId,...args]),
+      ]) as {meta:{changes:number}}[];
+      if(!changed[0]?.meta.changes)return fail('Your permission changed. Refresh and try again.',403,'permission_changed');
       return reply({ok: true});
     }
     if (path === '/blocks' && request.method === 'GET') {

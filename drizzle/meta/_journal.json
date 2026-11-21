@@ -57,6 +57,13 @@
       "when": 1795220848362,
       "tag": "0007_kkeep_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1795223407349,
+      "tag": "0008_chat_profiles_roles",
+      "breakpoints": true
     }
   ]
 }
