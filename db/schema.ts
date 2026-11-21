@@ -1,4 +1,5 @@
-import {sqliteTable,text,integer,index,uniqueIndex} from 'drizzle-orm/sqlite-core';
+import {sqliteTable,text,integer,index,uniqueIndex,check} from 'drizzle-orm/sqlite-core';
+import {sql} from 'drizzle-orm';
 export const browserItems=sqliteTable('browser_items',{
  id:text('id').primaryKey(),owner:text('owner').notNull(),kind:text('kind').notNull(),
  title:text('title').notNull(),url:text('url').notNull(),created:integer('created').notNull(),
@@ -51,3 +52,45 @@ export const kkeepAuthLimits=sqliteTable('kkeep_auth_limits',{
 export const kkeepMedia=sqliteTable('kkeep_media',{
  key:integer('key').primaryKey({autoIncrement:true}),account:text('account').notNull(),id:text('id').notNull(),
 },t=>[uniqueIndex('kkeep_media_owner_id').on(t.account,t.id)]);
+
+// The current chat uses Kkeep Profile identities. Retired private_* data stays isolated.
+export const kkeepChatProfiles=sqliteTable('kkeep_chat_profiles',{
+ account:text('account').primaryKey().references(()=>kkeepAccounts.id),
+ displayName:text('display_name').notNull(),searchKey:text('search_key').notNull(),bio:text('bio').notNull().default(''),
+ avatarKey:text('avatar_key'),avatarType:text('avatar_type'),avatarVersion:text('avatar_version'),
+ bannerKey:text('banner_key'),bannerType:text('banner_type'),bannerVersion:text('banner_version'),
+ nameColor:text('name_color').notNull().default('#eeeeee'),primaryColor:text('primary_color').notNull().default('#181b22'),secondaryColor:text('secondary_color').notNull().default('#121212'),
+ joined:integer('joined').notNull(),updated:integer('updated').notNull(),
+},t=>[index('kkeep_chat_profiles_search').on(t.searchKey),index('kkeep_chat_profiles_joined').on(t.joined)]);
+export const kkeepChatFriends=sqliteTable('kkeep_chat_friends',{
+ id:text('id').primaryKey(),pairKey:text('pair_key').notNull(),sender:text('sender').notNull().references(()=>kkeepChatProfiles.account),
+ receiver:text('receiver').notNull().references(()=>kkeepChatProfiles.account),status:text('status').notNull(),
+ created:integer('created').notNull(),updated:integer('updated').notNull(),
+},t=>[uniqueIndex('kkeep_chat_friends_pair').on(t.pairKey),index('kkeep_chat_friends_sender').on(t.sender,t.status),index('kkeep_chat_friends_receiver').on(t.receiver,t.status),check('kkeep_chat_friends_not_self',sql.raw('sender <> receiver')),check('kkeep_chat_friends_status',sql.raw("status IN ('pending','accepted')"))]);
+export const kkeepChatConversations=sqliteTable('kkeep_chat_conversations',{
+ id:text('id').primaryKey(),pairKey:text('pair_key').notNull(),low:text('low').notNull().references(()=>kkeepChatProfiles.account),
+ high:text('high').notNull().references(()=>kkeepChatProfiles.account),created:integer('created').notNull(),updated:integer('updated').notNull(),
+},t=>[uniqueIndex('kkeep_chat_conversations_pair').on(t.pairKey),index('kkeep_chat_conversations_low').on(t.low,t.updated),index('kkeep_chat_conversations_high').on(t.high,t.updated),check('kkeep_chat_conversations_order',sql.raw('low < high'))]);
+export const kkeepChatMessages=sqliteTable('kkeep_chat_messages',{
+ id:integer('id').primaryKey({autoIncrement:true}),room:text('room').notNull(),author:text('author').notNull().references(()=>kkeepChatProfiles.account),
+ text:text('text').notNull(),clientId:text('client_id').notNull(),created:integer('created').notNull(),deleted:integer('deleted').notNull().default(0),
+},t=>[index('kkeep_chat_messages_room_id').on(t.room,t.id),uniqueIndex('kkeep_chat_messages_retry').on(t.author,t.clientId),check('kkeep_chat_message_deleted',sql.raw('deleted IN (0,1)'))]);
+export const kkeepChatEvents=sqliteTable('kkeep_chat_events',{
+ id:integer('id').primaryKey({autoIncrement:true}),room:text('room').notNull(),message:integer('message').notNull().references(()=>kkeepChatMessages.id),kind:text('kind').notNull(),
+},t=>[index('kkeep_chat_events_room_id').on(t.room,t.id),uniqueIndex('kkeep_chat_events_message_kind').on(t.message,t.kind),check('kkeep_chat_event_kind',sql.raw("kind IN ('created','deleted')"))]);
+export const kkeepChatBlocks=sqliteTable('kkeep_chat_blocks',{
+ id:integer('id').primaryKey({autoIncrement:true}),blocker:text('blocker').notNull().references(()=>kkeepChatProfiles.account),blocked:text('blocked').notNull().references(()=>kkeepChatProfiles.account),created:integer('created').notNull(),
+},t=>[uniqueIndex('kkeep_chat_blocks_pair').on(t.blocker,t.blocked),index('kkeep_chat_blocks_incoming').on(t.blocked,t.blocker),check('kkeep_chat_blocks_not_self',sql.raw('blocker <> blocked'))]);
+export const kkeepChatReports=sqliteTable('kkeep_chat_reports',{
+ id:integer('id').primaryKey({autoIncrement:true}),reporter:text('reporter').notNull().references(()=>kkeepChatProfiles.account),message:integer('message').notNull().references(()=>kkeepChatMessages.id),reason:text('reason').notNull(),created:integer('created').notNull(),
+},t=>[uniqueIndex('kkeep_chat_reports_once').on(t.reporter,t.message)]);
+export const kkeepChatLimits=sqliteTable('kkeep_chat_limits',{
+ key:text('key').primaryKey(),count:integer('count').notNull(),expires:integer('expires').notNull(),
+},t=>[index('kkeep_chat_limits_expiry').on(t.expires)]);
+export const kkeepChatChannels=sqliteTable('kkeep_chat_channels',{
+ id:text('id').primaryKey(),name:text('name').notNull(),category:text('category').notNull(),readOnly:integer('read_only').notNull().default(0),archived:integer('archived').notNull().default(0),
+ createdBy:text('created_by').notNull().references(()=>kkeepChatProfiles.account),created:integer('created').notNull(),updated:integer('updated').notNull(),
+},()=>[check('kkeep_chat_channel_readonly',sql.raw('read_only IN (0,1)')),check('kkeep_chat_channel_archived',sql.raw('archived IN (0,1)'))]);
+export const kkeepChatAvatarCleanup=sqliteTable('kkeep_chat_avatar_cleanup',{
+ key:text('key').primaryKey(),account:text('account').notNull().references(()=>kkeepChatProfiles.account),created:integer('created').notNull(),
+},t=>[index('kkeep_chat_avatar_cleanup_account').on(t.account,t.created)]);

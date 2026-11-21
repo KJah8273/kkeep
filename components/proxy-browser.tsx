@@ -1,6 +1,6 @@
 'use client';
 import {useCallback,useEffect,useRef,useState,type FormEvent} from 'react';
-import {Image,UserRound,Maximize2,Minimize2,ArrowLeft,ArrowRight,CircleAlert,Globe2,LoaderCircle,Plus,RotateCw,ShieldCheck,X,Home,Gamepad2} from 'lucide-react';
+import {Image,MessageCircle,Maximize2,Minimize2,ArrowLeft,ArrowRight,CircleAlert,Globe2,LoaderCircle,Plus,RotateCw,ShieldCheck,X,Home,Gamepad2} from 'lucide-react';
 import {focusTikTok} from '@/lib/tiktok-view';
 import {applyTheme,isThemeId,isWallpaper,defaultTheme,type ThemeId,type Wallpaper} from '@/lib/themes';
 import {photoWallpapers} from '@/lib/wallpapers';
@@ -11,6 +11,7 @@ import {mountProxy,normalizeAddress,setLiteMode,setAdBlocking,type ProxyHandle} 
 import KkeepHome from '@/components/kkeep-home';
 import WallpaperGallery from '@/components/wallpaper-gallery';
 import ProfilePanel from '@/components/profile-panel';
+import AccountAvatar from '@/components/account-avatar';
 import FeedbackMenu from '@/components/feedback-menu';
 import type {ProfileSnapshot} from '@/lib/profile-model';
 import {useLivingSpace} from '@/components/living-space/use-living-space';
@@ -221,7 +222,8 @@ export default function ProxyBrowser({startApp}:{startApp?:'TikTok'|'YouTube'|'S
     <header className="workspace-header">
       {current.url&&<button className="workspace-title" onClick={home} aria-label="Kkeep home">kkeep</button>}
       <nav className="workspace-actions" aria-label="Kkeep tools">
-        <Button variant="ghost" onClick={()=>setStudio(true)}><Image size={20}/>Wallpaper</Button><Button variant="ghost" onClick={()=>setProfileOpen(true)}><UserRound size={20}/>Profile</Button><FeedbackMenu/>
+        <Button variant="ghost" asChild><a className="workspace-chat" href="/chat"><MessageCircle size={20}/>Chat</a></Button>
+        <Button variant="ghost" onClick={()=>setStudio(true)}><Image size={20}/>Wallpaper</Button><Button variant="ghost" onClick={()=>setProfileOpen(true)}><AccountAvatar size={24}/>Profile</Button><FeedbackMenu/>
       </nav>
     </header>
     <Tabs value={active} onValueChange={setActive} className="browser">

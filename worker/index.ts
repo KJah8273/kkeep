@@ -11,6 +11,7 @@ import {hgolaBuild,hgolaAsset} from './hgola';
 import {hgolaFile} from './hgola-files';
 import {profileMedia} from './profile-media';
 import {profileApi} from './profile';
+import {chatApi} from './chat';
 import {hgolaSave} from './hgola-saves';
 import {gameAsset,type GameAssetEnv} from './game-assets';
 
@@ -40,6 +41,7 @@ interface ExecutionContext {
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+    if(/^\/api\/chat(?:\/|$)/.test(url.pathname))return chatApi(request,env);
     // The retired project download must not fall through to the application shell.
     if (url.pathname === '/source/kha-proxy-source.zip') {
       return new Response('Not found',{status:404,headers:{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'}});

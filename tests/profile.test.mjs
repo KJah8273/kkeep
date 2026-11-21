@@ -4,13 +4,13 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {profileApi,profileIdentity} from '../worker/profile.ts';
 import {username,snapshot} from '../lib/profile-model.ts';
-import {defaults} from '../lib/living-space/model.ts';
+import {defaults,photoIds} from '../lib/living-space/model.ts';
 import {hgolaSave} from '../worker/hgola-saves.ts';
 function db(){const sql=new DatabaseSync(':memory:');for(const f of ['0004_smiling_vector.sql','0005_lonely_landau.sql'])sql.exec(readFileSync(new URL('../drizzle/'+f,import.meta.url),'utf8'));return {prepare(query){let args=[];const st={bind(...v){args=v;return st;},async all(){return {results:sql.prepare(query).all(...args)};},async run(){return {meta:sql.prepare(query).run(...args)};}};return st;},batch:items=>Promise.all(items.map(i=>i.run())),sql};}
 const origin='https://kkeep.test';
 function req(input,cookie='',path='/api/profile'){return new Request(origin+path,{method:input?'POST':'GET',headers:{'X-Kkeep-Profile':'1','X-Kkeep-Hgola':'1','Content-Type':'application/json',Origin:origin,Cookie:cookie,'CF-Connecting-IP':'127.0.0.1'},body:input?JSON.stringify(input):undefined});}
 const look={theme:'midnight',wallpaper:'stars',match:true,moving:true,dense:false};
-const data={version:1,preferences:{...defaults,wallpaper:'brick-planets'},legacy:look,original:look};
+const data={version:1,preferences:{...defaults,wallpaper:photoIds[0]},legacy:look,original:look};
 test('usernames normalize Arabic and English and reject offensive variants',()=>{
  assert.equal(username('Khaled_123').key,'khaled123');assert.equal(username('خالد سالم').name,'خالد سالم');assert.equal(username('أحمد').key,username('احمد').key);
  for(const name of ['f.u.c.k','SH1T','قحبة','شرموط','كسم','bad<script>','abc\u202e'])assert.throws(()=>username(name));
@@ -23,7 +23,7 @@ test('accounts hash passwords, restore across devices, isolate users, reject sta
  assert.equal((await profileApi(req({action:'save',data,revision:0},cookie),store)).status,200);
  assert.equal((await profileApi(req({action:'save',data,revision:0},cookie),store)).status,409);
  const login=await profileApi(req({action:'login',username:'khaled123',password:'Strong-Test-2026'}),store);assert.equal(login.status,200);const otherDevice=login.headers.get('set-cookie').split(';')[0];
- const restored=await (await profileApi(req(null,otherDevice),store)).json();assert.equal(restored.data.preferences.wallpaper,'brick-planets');assert.equal(restored.revision,1);
+ const restored=await (await profileApi(req(null,otherDevice),store)).json();assert.equal(restored.data.preferences.wallpaper,photoIds[0]);assert.equal(restored.revision,1);
  assert.equal((await profileApi(req({action:'login',username:'khaled123',password:'Wrong-Password'}),store)).status,401);
  assert.equal((await (await profileApi(req(null),store)).json()).account,null);
  assert.equal((await profileApi(req({action:'save',data,revision:1}),store)).status,401);

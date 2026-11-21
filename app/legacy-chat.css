@@ -1,0 +1,7 @@
+.legacy-chat-navigation{display:flex;align-items:center;justify-content:center;gap:4px;padding:4px;border:1px solid #ffffff0c;border-radius:999px;background:#1b1b1b}
+.legacy-chat-navigation a{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:7px 15px;border-radius:999px;color:#a8a8a8;font-size:13px;font-weight:550;text-decoration:none;transition:color .15s,background .15s}
+.legacy-chat-navigation a:hover{background:#272727;color:#fff}
+.legacy-chat-navigation a[aria-current=page]{background:#303030;color:#f2f2f2}
+.legacy-chat-navigation a:focus-visible{outline:2px solid #a8bce8;outline-offset:2px}
+@media(max-width:600px){.legacy-chat-navigation{gap:1px;padding:3px}.legacy-chat-navigation a{gap:5px;padding:7px 10px;font-size:12px;min-height:34px}}
+@media(max-width:370px){.legacy-chat-navigation a{padding:7px}.legacy-chat-navigation a svg{display:none}}
