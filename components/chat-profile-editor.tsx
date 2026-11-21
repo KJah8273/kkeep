@@ -5,25 +5,26 @@ import {Check,LoaderCircle,Pencil,RotateCcw,Trash2,Upload} from 'lucide-react';
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from '@/components/ui/dialog';
 import ChatProfileCard from './chat-profile-card';
 import ChatAvatar from './chat-avatar';
-import {AVATAR_DECORATIONS,NAMEPLATE_STYLES,ChatNameplateArt,ChatRoleBadges} from './chat-appearance';
+import {AVATAR_DECORATIONS,NAMEPLATE_STYLES,PROFILE_FRAMES,ChatNameplateArt,ChatProfileFrameArt,ChatRoleBadges} from './chat-appearance';
 import {username as parseUsername} from '@/lib/profile-model';
 import {chatRequest,ChatApiError,announceChatProfile,announceChatAccountRename,renameChatAccount,normalizeChatColor,prepareChatMedia} from '@/lib/chat-client';
 import {CHAT_BIO_MAX,type ChatProfile} from '@/lib/chat-model';
 import '@/app/chat.css';
 
-type ProfileDraft=Pick<ChatProfile,'displayName'|'bio'|'nameColor'|'primaryColor'|'secondaryColor'|'username'|'avatarDecoration'|'nameplateStyle'>;
+type ProfileDraft=Pick<ChatProfile,'displayName'|'bio'|'nameColor'|'primaryColor'|'secondaryColor'|'username'|'avatarDecoration'|'nameplateStyle'|'profileFrame'>;
 type MediaDraft={action:'replace';blob:Blob;url:string;name:string}|{action:'remove'}|null;
 type MediaKind='avatar'|'banner';
 type ThemeKey='primaryColor'|'secondaryColor';
 const palette=['#1e2c40','#000000','#28282b','#482323','#4b3016','#403711','#193b29','#143a34','#123542','#142d50','#292657','#3c2852','#50264f','#52243c','#561f2e'];
 const validColor=(color:string)=>/^#[0-9a-f]{6}$/i.test(color);
-const makeDraft=(profile:ChatProfile):ProfileDraft=>({displayName:profile.displayName,bio:profile.bio,nameColor:normalizeChatColor(profile.nameColor),primaryColor:normalizeChatColor(profile.primaryColor,'#181b22'),secondaryColor:normalizeChatColor(profile.secondaryColor,'#121212'),username:profile.username||profile.name,avatarDecoration:profile.avatarDecoration||'none',nameplateStyle:profile.nameplateStyle||'none'});
-const fieldsChanged=(draft:ProfileDraft,profile:ChatProfile)=>{const saved=makeDraft(profile);return draft.displayName.trim()!==saved.displayName||draft.bio.trim()!==saved.bio||draft.nameColor.toLowerCase()!==saved.nameColor||draft.primaryColor.toLowerCase()!==saved.primaryColor||draft.secondaryColor.toLowerCase()!==saved.secondaryColor||draft.avatarDecoration!==saved.avatarDecoration||draft.nameplateStyle!==saved.nameplateStyle;};
+const makeDraft=(profile:ChatProfile):ProfileDraft=>({displayName:profile.displayName,bio:profile.bio,nameColor:normalizeChatColor(profile.nameColor),primaryColor:normalizeChatColor(profile.primaryColor,'#181b22'),secondaryColor:normalizeChatColor(profile.secondaryColor,'#121212'),username:profile.username||profile.name,avatarDecoration:profile.avatarDecoration||'none',nameplateStyle:profile.nameplateStyle||'none',profileFrame:profile.profileFrame||'none'});
+const fieldsChanged=(draft:ProfileDraft,profile:ChatProfile)=>{const saved=makeDraft(profile);return draft.displayName.trim()!==saved.displayName||draft.bio.trim()!==saved.bio||draft.nameColor.toLowerCase()!==saved.nameColor||draft.primaryColor.toLowerCase()!==saved.primaryColor||draft.secondaryColor.toLowerCase()!==saved.secondaryColor||draft.avatarDecoration!==saved.avatarDecoration||draft.nameplateStyle!==saved.nameplateStyle||draft.profileFrame!==saved.profileFrame;};
 
 export default function ChatProfileEditor({open,onOpenChange,profile,onSaved}:{open:boolean;onOpenChange:(open:boolean)=>void;profile:ChatProfile;onSaved:(profile:ChatProfile)=>void}){
   const [draft,setDraft]=useState<ProfileDraft>(()=>makeDraft(profile));
   const [avatar,setAvatar]=useState<MediaDraft>(null),[banner,setBanner]=useState<MediaDraft>(null);
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[preparing,setPreparing]=useState<MediaKind|null>(null),[saveStep,setSaveStep]=useState(''),[saved,setSaved]=useState(false),[activeTheme,setActiveTheme]=useState<ThemeKey>('primaryColor');
+  const [styleCategory,setStyleCategory]=useState<'avatar'|'nameplate'|'frame'>('avatar');
   const container=useRef<HTMLDivElement>(null),avatarInput=useRef<HTMLInputElement>(null),bannerInput=useRef<HTMLInputElement>(null),primaryInput=useRef<HTMLInputElement>(null),secondaryInput=useRef<HTMLInputElement>(null);
   const active=useRef(true),isOpen=useRef(open),currentIdentity=useRef(profile.id),latestProfile=useRef(profile),operation=useRef<AbortController|null>(null),mediaSequence=useRef({avatar:0,banner:0});
   isOpen.current=open;currentIdentity.current=profile.id;latestProfile.current=profile;
@@ -32,7 +33,7 @@ export default function ChatProfileEditor({open,onOpenChange,profile,onSaved}:{o
   useEffect(()=>{
     operation.current?.abort();mediaSequence.current.avatar++;mediaSequence.current.banner++;
     setAvatar(null);setBanner(null);setError('');setBusy(false);setPreparing(null);setSaveStep('');setSaved(false);
-    if(open){setDraft(makeDraft(latestProfile.current));setActiveTheme('primaryColor');}
+    if(open){setDraft(makeDraft(latestProfile.current));setActiveTheme('primaryColor');setStyleCategory('avatar');}
     return()=>{operation.current?.abort();mediaSequence.current.avatar++;mediaSequence.current.banner++;};
   },[open,profile.id]);
   useEffect(()=>{if(!open)return;const viewport=window.visualViewport;if(!viewport)return;const update=()=>{container.current?.style.setProperty('--profile-editor-height',viewport.height+'px');container.current?.style.setProperty('--profile-editor-top',viewport.offsetTop+viewport.height/2+'px');};update();viewport.addEventListener('resize',update,{passive:true});viewport.addEventListener('scroll',update,{passive:true});return()=>{viewport.removeEventListener('resize',update);viewport.removeEventListener('scroll',update);};},[open]);
@@ -87,7 +88,7 @@ export default function ChatProfileEditor({open,onOpenChange,profile,onSaved}:{o
       }
       if(fieldsChanged(submitted,latest)){
         setSaveStep('Saving profile…');
-        const result=await chatRequest<{profile:ChatProfile}>('/profile',{method:'PATCH',body:{displayName:submitted.displayName.trim(),bio:submitted.bio.trim(),nameColor:submitted.nameColor,primaryColor:submitted.primaryColor,secondaryColor:submitted.secondaryColor,avatarDecoration:submitted.avatarDecoration,nameplateStyle:submitted.nameplateStyle},signal:controller.signal});
+        const result=await chatRequest<{profile:ChatProfile}>('/profile',{method:'PATCH',body:{displayName:submitted.displayName.trim(),bio:submitted.bio.trim(),nameColor:submitted.nameColor,primaryColor:submitted.primaryColor,secondaryColor:submitted.secondaryColor,avatarDecoration:submitted.avatarDecoration,nameplateStyle:submitted.nameplateStyle,profileFrame:submitted.profileFrame},signal:controller.signal});
         apply(result.profile);
       }
       let renamed:{id:string;name:string;username:string}|null=null;
@@ -127,13 +128,12 @@ export default function ChatProfileEditor({open,onOpenChange,profile,onSaved}:{o
               {avatar?.action==='replace'&&<p className="chat-profile-file" title={avatar.name}>{avatar.name} <span>Ready to save</span></p>}{avatar?.action==='remove'&&<p className="chat-profile-help">Avatar will be removed when you save.</p>}
               <input ref={avatarInput} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" aria-label="Choose avatar image or GIF" tabIndex={-1} onChange={event=>void chooseMedia(event,'avatar')} disabled={locked}/>
             </section>
-            <section className="chat-profile-section">
-              <h3>Avatar decoration</h3><p>A frame that follows your avatar everywhere in Kkeep.</p>
-              <div className="chat-decoration-options" role="group" aria-label="Avatar decoration">{AVATAR_DECORATIONS.map(option=><button key={option.id} type="button" className={draft.avatarDecoration===option.id?'is-selected':''} aria-pressed={draft.avatarDecoration===option.id} disabled={locked} onClick={()=>update('avatarDecoration',option.id)}><ChatAvatar user={{...preview,avatarDecoration:option.id}} size={50}/><span>{option.name}</span>{draft.avatarDecoration===option.id&&<Check size={13}/>}</button>)}</div>
-            </section>
-            <section className="chat-profile-section">
-              <h3>Nameplate</h3><p>A little atmosphere behind your name in chat and friend lists.</p>
-              <div className="chat-nameplate-options" role="group" aria-label="Nameplate style">{NAMEPLATE_STYLES.map(option=><button key={option.id} type="button" className={'chat-nameplate-option '+(draft.nameplateStyle===option.id?'is-selected':'')} aria-pressed={draft.nameplateStyle===option.id} disabled={locked} onClick={()=>update('nameplateStyle',option.id)}><span className="chat-nameplate chat-nameplate-sample"><ChatNameplateArt kind={option.id}/><ChatAvatar user={preview} size={29}/><strong>{preview.displayName}</strong>{draft.nameplateStyle===option.id&&<Check size={15}/>}</span><span>{option.name}</span></button>)}</div>
+            <section className="chat-profile-section chat-profile-style-section">
+              <h3>Profile styles</h3><p>Small details that make your profile your own.</p>
+              <div className="chat-style-switcher" role="group" aria-label="Style category"><button type="button" aria-pressed={styleCategory==='avatar'} onClick={()=>setStyleCategory('avatar')}>Avatar</button><button type="button" aria-pressed={styleCategory==='nameplate'} onClick={()=>setStyleCategory('nameplate')}>Nameplate</button><button type="button" aria-pressed={styleCategory==='frame'} onClick={()=>setStyleCategory('frame')}>Profile frame</button></div>
+              {styleCategory==='avatar'&&<><p className="chat-style-description">A decoration that follows your avatar everywhere in Kkeep.</p><div className="chat-decoration-options" role="group" aria-label="Avatar decoration">{AVATAR_DECORATIONS.map(option=><button key={option.id} type="button" className={draft.avatarDecoration===option.id?'is-selected':''} aria-pressed={draft.avatarDecoration===option.id} disabled={locked} onClick={()=>update('avatarDecoration',option.id)}><ChatAvatar user={{...preview,avatarDecoration:option.id}} size={50}/><span>{option.name}</span>{draft.avatarDecoration===option.id&&<Check size={13}/>}</button>)}</div></>}
+              {styleCategory==='nameplate'&&<><p className="chat-style-description">Atmosphere behind your name in chat, the member list, and friends.</p><div className="chat-nameplate-options" role="group" aria-label="Nameplate style">{NAMEPLATE_STYLES.map(option=><button key={option.id} type="button" className={'chat-nameplate-option '+(draft.nameplateStyle===option.id?'is-selected':'')} aria-pressed={draft.nameplateStyle===option.id} disabled={locked} onClick={()=>update('nameplateStyle',option.id)}><span className="chat-nameplate chat-nameplate-sample"><ChatNameplateArt kind={option.id}/><ChatAvatar user={preview} size={29}/><strong>{preview.displayName}</strong>{draft.nameplateStyle===option.id&&<Check size={15}/>}</span><span>{option.name}</span></button>)}</div></>}
+              {styleCategory==='frame'&&<><p className="chat-style-description">A border for the full card people see when they open your profile.</p><div className="chat-frame-options" role="group" aria-label="Profile frame">{PROFILE_FRAMES.map(option=><button key={option.id} type="button" className={'chat-frame-option '+(draft.profileFrame===option.id?'is-selected':'')} aria-pressed={draft.profileFrame===option.id} disabled={locked} onClick={()=>update('profileFrame',option.id)}><span className="chat-frame-sample"><span className="chat-frame-sample-banner" style={{background:normalizeChatColor(preview.primaryColor,'#181b22')}}/><span className="chat-frame-sample-body"><ChatAvatar user={{...preview,avatarDecoration:'none'}} size={21}/><strong>{preview.displayName}</strong><span className="chat-frame-sample-line"/><span className="chat-frame-sample-line short"/><span className="chat-frame-sample-button"/></span><ChatProfileFrameArt kind={option.id}/></span><span>{option.name}</span>{draft.profileFrame===option.id&&<Check size={13}/>}</button>)}</div></>}
             </section>
             <section className="chat-profile-section">
               <h3>Banner</h3><p>Shows your primary color until you add one.</p>

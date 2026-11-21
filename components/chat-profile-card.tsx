@@ -2,7 +2,7 @@
 
 import {useEffect,useState,type CSSProperties,type ReactNode} from 'react';
 import ChatAvatar from './chat-avatar';
-import {ChatNameplateArt,ChatRoleBadges} from './chat-appearance';
+import {ChatNameplateArt,ChatProfileFrameArt,ChatRoleBadges} from './chat-appearance';
 import {chatNameColor,normalizeChatColor} from '@/lib/chat-client';
 import type {ChatProfile} from '@/lib/chat-model';
 import '@/app/chat.css';
@@ -22,7 +22,7 @@ export default function ChatProfileCard({profile,preview=false,actions,showJoine
     '--chat-profile-bottom':shadedColor(secondary),
     '--chat-profile-name':chatNameColor(profile.nameColor,'#4d4d4d'),
   } as CSSProperties;
-  return <article className={'chat-profile-card '+className} style={style} aria-label={preview?'Live profile preview':profile.displayName+'’s profile'}>
+  return <article className={'chat-profile-card '+(profile.profileFrame&&profile.profileFrame!=='none'?'has-profile-frame ':'')+className} data-profile-frame={profile.profileFrame||'none'} style={style} aria-label={preview?'Live profile preview':profile.displayName+'’s profile'}>
     <div className="chat-card-banner">
       {profile.bannerUrl&&!bannerFailed&&<img src={profile.bannerUrl} alt="" decoding="async" onError={()=>setBannerFailed(true)}/>}
     </div>
@@ -34,5 +34,6 @@ export default function ChatProfileCard({profile,preview=false,actions,showJoine
       {showJoined&&<p className="chat-card-joined">Joined {new Date(profile.joinedAt).toLocaleDateString([],{month:'long',year:'numeric'})}</p>}
       {actions?<div className="chat-card-actions">{actions}</div>:preview?<div className="chat-card-example" aria-hidden="true">Example button</div>:null}
     </div>
+    <ChatProfileFrameArt kind={profile.profileFrame}/>
   </article>;
 }

@@ -4,7 +4,7 @@
 
 Open Profile, then **Edit photo and profile**, or use the profile settings button at the bottom of Chat. The editor has a live preview and explicit Save and Reset controls.
 
-Members can set a display name, account username, name color, photo or animated GIF avatar, photo or animated GIF banner, two profile colors, and an About me description. They can also choose an avatar decoration and a nameplate background. Decorations preserve the center of the avatar, and reduced-motion preferences disable decorative animation.
+Members can set a display name, account username, name color, photo or animated GIF avatar, photo or animated GIF banner, two profile colors, and an About me description. They can also choose an avatar decoration, a nameplate background, and a frame around the full profile card. Decorations preserve the center of the avatar, and reduced-motion preferences disable decorative animation.
 
 The same saved appearance is used in messages, friends, direct-message lists, member management, and the public profile card. Clicking a member's photo or name opens their profile. The compact nameplate is separate from the full profile banner.
 

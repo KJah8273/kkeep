@@ -61,6 +61,7 @@ export const kkeepChatProfiles=sqliteTable('kkeep_chat_profiles',{
  bannerKey:text('banner_key'),bannerType:text('banner_type'),bannerVersion:text('banner_version'),
  nameColor:text('name_color').notNull().default('#eeeeee'),primaryColor:text('primary_color').notNull().default('#181b22'),secondaryColor:text('secondary_color').notNull().default('#121212'),
  avatarDecoration:text('avatar_decoration').notNull().default('none'),nameplateStyle:text('nameplate_style').notNull().default('none'),
+ profileFrame:text('profile_frame').notNull().default('none'),
  joined:integer('joined').notNull(),updated:integer('updated').notNull(),
 },t=>[index('kkeep_chat_profiles_search').on(t.searchKey),index('kkeep_chat_profiles_joined').on(t.joined)]);
 export const kkeepChatFriends=sqliteTable('kkeep_chat_friends',{
@@ -75,6 +76,7 @@ export const kkeepChatConversations=sqliteTable('kkeep_chat_conversations',{
 export const kkeepChatMessages=sqliteTable('kkeep_chat_messages',{
  id:integer('id').primaryKey({autoIncrement:true}),room:text('room').notNull(),author:text('author').notNull().references(()=>kkeepChatProfiles.account),
  text:text('text').notNull(),clientId:text('client_id').notNull(),created:integer('created').notNull(),deleted:integer('deleted').notNull().default(0),
+ kind:text('kind').notNull().default('text'),
 },t=>[index('kkeep_chat_messages_room_id').on(t.room,t.id),uniqueIndex('kkeep_chat_messages_retry').on(t.author,t.clientId),check('kkeep_chat_message_deleted',sql.raw('deleted IN (0,1)'))]);
 export const kkeepChatEvents=sqliteTable('kkeep_chat_events',{
  id:integer('id').primaryKey({autoIncrement:true}),room:text('room').notNull(),message:integer('message').notNull().references(()=>kkeepChatMessages.id),kind:text('kind').notNull(),
@@ -107,3 +109,16 @@ export const kkeepChatMemberRoles=sqliteTable('kkeep_chat_member_roles',{
 export const kkeepChatModeration=sqliteTable('kkeep_chat_moderation',{
  account:text('account').primaryKey().references(()=>kkeepChatProfiles.account),banned:integer('banned').notNull().default(0),timeoutUntil:integer('timeout_until'),reason:text('reason').notNull().default(''),updatedBy:text('updated_by').notNull().references(()=>kkeepAccounts.id),updated:integer('updated').notNull(),
 },()=>[check('kkeep_chat_moderation_banned',sql.raw('banned IN (0,1)'))]);
+export const kkeepChatPolls=sqliteTable('kkeep_chat_polls',{
+ message:integer('message').primaryKey().references(()=>kkeepChatMessages.id),question:text('question').notNull(),options:text('options').notNull(),allowMultiple:integer('allow_multiple').notNull().default(0),
+ closesAt:integer('closes_at').notNull(),closedAt:integer('closed_at'),revision:text('revision').notNull(),
+},()=>[check('kkeep_chat_poll_multiple',sql.raw('allow_multiple IN (0,1)'))]);
+export const kkeepChatPollBallots=sqliteTable('kkeep_chat_poll_ballots',{
+ id:integer('id').primaryKey({autoIncrement:true}),message:integer('message').notNull().references(()=>kkeepChatPolls.message),account:text('account').notNull().references(()=>kkeepChatProfiles.account),options:text('options').notNull(),updated:integer('updated').notNull(),
+},t=>[uniqueIndex('kkeep_chat_poll_ballot_account').on(t.message,t.account)]);
+export const kkeepChatPollUpdates=sqliteTable('kkeep_chat_poll_updates',{
+ id:integer('id').primaryKey({autoIncrement:true}),message:integer('message').notNull().references(()=>kkeepChatPolls.message),room:text('room').notNull(),
+},t=>[uniqueIndex('kkeep_chat_poll_update_message').on(t.message),index('kkeep_chat_poll_updates_room_id').on(t.room,t.id)]);
+export const kkeepChatPresence=sqliteTable('kkeep_chat_presence',{
+ id:integer('id').primaryKey({autoIncrement:true}),account:text('account').notNull().references(()=>kkeepChatProfiles.account),client:text('client').notNull(),sequence:integer('sequence').notNull(),expires:integer('expires').notNull(),updated:integer('updated').notNull(),
+},t=>[uniqueIndex('kkeep_chat_presence_account_client').on(t.account,t.client),index('kkeep_chat_presence_account_expiry').on(t.account,t.expires)]);

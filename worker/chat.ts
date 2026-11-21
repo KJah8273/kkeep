@@ -4,23 +4,25 @@ import {chatOwnerAccount} from './chat-owner.ts';
 import {activeSql,chatAccess,moderationSql,ownerSql,permissionBits,permissionSql,roleList,type ChatSql} from './chat-access.ts';
 import {normalizeChatAvatar} from './chat-avatar.ts';
 import {normalizeChatGif} from './chat-gif.ts';
+import {PollError,createPoll,readPoll,votePoll,closePoll,pollsForMessages,pollWatermark,pollChanges,type PollContext} from './chat-polls.ts';
+import {PresenceError,presenceOnlineSql,presenceVisibility,updatePresence} from './chat-presence.ts';
 import type {BrowserDB} from './browser-data.ts';
 import type {GameBucket} from './game-assets.ts';
 import {detectImageType, normalizeText} from '../lib/chat-moderation.ts';
-import {DEFAULT_CHAT_CHANNELS, CHAT_AVATAR_MAX, CHAT_GIF_MAX, CHAT_BIO_MAX, CHAT_MESSAGE_MAX,CHAT_AVATAR_DECORATIONS,CHAT_NAMEPLATE_STYLES,CHAT_PERMISSIONS,type ChatAvatarDecoration,type ChatNameplateStyle,type ChatRoleBadge,type ChatRole,type ChatPermission,type ChatAccess, type ChatChannel, type ChatProfile, type ChatUser, type ChatMessage, type ChatFriend, type ChatRelationship, type ChatConversation} from '../lib/chat-model.ts';
+import {DEFAULT_CHAT_CHANNELS, CHAT_AVATAR_MAX, CHAT_GIF_MAX, CHAT_BIO_MAX, CHAT_MESSAGE_MAX,CHAT_AVATAR_DECORATIONS,CHAT_NAMEPLATE_STYLES,CHAT_PROFILE_FRAMES,CHAT_PERMISSIONS,type ChatProfileFrame,type ChatAvatarDecoration,type ChatNameplateStyle,type ChatRoleBadge,type ChatRole,type ChatPermission,type ChatAccess, type ChatChannel, type ChatProfile, type ChatUser, type ChatMessage, type ChatFriend, type ChatRelationship, type ChatConversation} from '../lib/chat-model.ts';
 
 export type ChatEnv = AnalyticsEnv & {
   DB?: BrowserDB;
   GAME_ASSETS?: GameBucket & {delete?(key: string): Promise<unknown>};
   IMAGES?: {input(stream: ReadableStream): {transform(options: Record<string, unknown>): {output(options: {format: string; quality: number; anim?: boolean}): Promise<{response(): Response | Promise<Response>}>}}};
 };
-type Row = {id: string; name: string; displayName: string; bio: string; nameColor: string; primaryColor: string; secondaryColor: string; avatarVersion: string | null; joinedAt: number; avatarKey: string | null; avatarType: string | null; bannerVersion: string | null; bannerKey: string | null; bannerType: string | null;avatarDecoration:ChatAvatarDecoration;nameplateStyle:ChatNameplateStyle;rolesJson:string;isOwner:number};
-type MessageRow = Row & {messageId: number; room: string; authorId: string; text: string; clientId: string; createdAt: number; deleted: number};
+type Row = {id: string; name: string; displayName: string; bio: string; nameColor: string; primaryColor: string; secondaryColor: string; avatarVersion: string | null; joinedAt: number; avatarKey: string | null; avatarType: string | null; bannerVersion: string | null; bannerKey: string | null; bannerType: string | null;avatarDecoration:ChatAvatarDecoration;nameplateStyle:ChatNameplateStyle;profileFrame:ChatProfileFrame;rolesJson:string;isOwner:number};
+type MessageRow = Row & {messageId: number; room: string; authorId: string; text: string; clientId: string; createdAt: number; deleted: number;kind:string};
 type FriendRow = Row & {friendId: string; sender: string; receiver: string; status: 'pending' | 'accepted'; createdAt: number};
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
-const profileColumns = 'p.account AS id,a.username AS name,p.display_name AS displayName,p.bio,p.name_color AS nameColor,p.primary_color AS primaryColor,p.secondary_color AS secondaryColor,p.avatar_version AS avatarVersion,p.avatar_key AS avatarKey,p.avatar_type AS avatarType,p.banner_version AS bannerVersion,p.banner_key AS bannerKey,p.banner_type AS bannerType,p.joined AS joinedAt,p.avatar_decoration AS avatarDecoration,p.nameplate_style AS nameplateStyle,EXISTS(SELECT 1 FROM kkeep_chat_owner co WHERE co.account=p.account) AS isOwner,COALESCE((SELECT json_group_array(json_object(\'id\',id,\'name\',name,\'color\',color,\'position\',position)) FROM (SELECT r.id,r.name,r.color,r.position FROM kkeep_chat_member_roles mr JOIN kkeep_chat_roles r ON r.id=mr.role WHERE mr.account=p.account ORDER BY r.position DESC,r.id LIMIT 8)),\'[]\') AS rolesJson';
+const profileColumns = 'p.account AS id,a.username AS name,p.display_name AS displayName,p.bio,p.name_color AS nameColor,p.primary_color AS primaryColor,p.secondary_color AS secondaryColor,p.avatar_version AS avatarVersion,p.avatar_key AS avatarKey,p.avatar_type AS avatarType,p.banner_version AS bannerVersion,p.banner_key AS bannerKey,p.banner_type AS bannerType,p.joined AS joinedAt,p.avatar_decoration AS avatarDecoration,p.nameplate_style AS nameplateStyle,p.profile_frame AS profileFrame,EXISTS(SELECT 1 FROM kkeep_chat_owner co WHERE co.account=p.account) AS isOwner,COALESCE((SELECT json_group_array(json_object(\'id\',id,\'name\',name,\'color\',color,\'position\',position)) FROM (SELECT r.id,r.name,r.color,r.position FROM kkeep_chat_member_roles mr JOIN kkeep_chat_roles r ON r.id=mr.role WHERE mr.account=p.account ORDER BY r.position DESC,r.id LIMIT 8)),\'[]\') AS rolesJson';
 const profileJoin = 'kkeep_chat_profiles p JOIN kkeep_accounts a ON a.id=p.account';
-const messageColumns = 'm.id AS messageId,m.room,m.author AS authorId,m.text,m.client_id AS clientId,m.created AS createdAt,m.deleted,' + profileColumns;
+const messageColumns = 'm.id AS messageId,m.room,m.author AS authorId,m.text,m.client_id AS clientId,m.created AS createdAt,m.deleted,m.kind,' + profileColumns;
 const messageJoin = 'kkeep_chat_messages m JOIN kkeep_chat_profiles p ON p.account=m.author JOIN kkeep_accounts a ON a.id=p.account';
 const jsonHeaders = {'Cache-Control': 'no-store, private', 'X-Content-Type-Options': 'nosniff', 'Cross-Origin-Resource-Policy': 'same-origin', Vary: 'Cookie, oai-authenticated-user-email'};
 
@@ -36,7 +38,7 @@ const fail = (message: string, status = 400, code = 'invalid_request'): never =>
 const reply = (data: unknown, status = 200) => Response.json(data, {status, headers: jsonHeaders});
 const pair = (a: string, b: string) => [a, b].sort().join(':');
 const user = (row: Row): ChatUser => ({id: row.id, username:row.name,name: row.name, displayName: row.displayName, nameColor: row.nameColor, avatarUrl: row.avatarKey && row.avatarVersion ? '/api/chat/avatar/' + row.id + '?v=' + encodeURIComponent(row.avatarVersion) : null,avatarDecoration:row.avatarDecoration,nameplateStyle:row.nameplateStyle,isOwner:!!row.isOwner,roles:JSON.parse(row.rolesJson) as ChatRoleBadge[]});
-const profile = (row: Row): ChatProfile => ({...user(row), bio: row.bio, joinedAt: row.joinedAt, bannerUrl: row.bannerKey && row.bannerVersion ? '/api/chat/banner/' + row.id + '?v=' + encodeURIComponent(row.bannerVersion) : null, primaryColor: row.primaryColor, secondaryColor: row.secondaryColor});
+const profile = (row: Row): ChatProfile => ({...user(row), bio: row.bio, joinedAt: row.joinedAt, bannerUrl: row.bannerKey && row.bannerVersion ? '/api/chat/banner/' + row.id + '?v=' + encodeURIComponent(row.bannerVersion) : null, primaryColor: row.primaryColor, secondaryColor: row.secondaryColor,profileFrame:row.profileFrame});
 const message = (row: MessageRow, viewer: string|null): ChatMessage => ({id: row.messageId, roomId: row.room, author: user(row), text: row.deleted ? '' : row.text, createdAt: row.createdAt, deleted: !!row.deleted, ...(row.authorId === viewer ? {clientId: row.clientId} : {})});
 const statement = (db: BrowserDB, sql: string, args: unknown[] = []) => db.prepare(sql).bind(...args);
 async function rows<T>(db: BrowserDB, sql: string, args: unknown[] = []): Promise<T[]> {return (await statement(db, sql, args).all()).results as T[];}
@@ -105,7 +107,7 @@ async function rate(db: BrowserDB, scope: string, account: string, limit: number
   const now = Date.now(), window = Math.floor(now / period), key = scope + ':' + account + ':' + window;
   const result = await statement(db, 'INSERT INTO kkeep_chat_limits (key,count,expires) VALUES (?,1,?) ON CONFLICT(key) DO UPDATE SET count=count+1 WHERE count<?', [key, now + period * 2, limit]).run();
   if (!result.meta.changes) throw new ChatError('Please wait a moment before trying again.', 429, 'rate_limited', Math.ceil(((window + 1) * period - now) / 1000));
-  // Expiring counters are the only chat rows automatically cleaned up.
+  // This cleanup touches expired rate counters only.
   await statement(db, 'DELETE FROM kkeep_chat_limits WHERE expires<?', [now]).run();
 }
 function unblocked(left: string, right: string) {
@@ -185,25 +187,44 @@ async function messageRows(db: BrowserDB, viewer: string|null, room: string, ext
   const access = roomAccess(room, viewer);
   return rows<MessageRow>(db, 'SELECT ' + messageColumns + ' FROM ' + messageJoin + ' WHERE m.room=? AND ' + access.sql + ' AND ' + unblocked('m.author', '?') + ' ' + extra, [room, ...access.args, viewer, viewer, ...args]);
 }
+function pollContext(db:BrowserDB,viewer:string|null):PollContext {return {db,viewer,roomAccess,rate:(scope,account,limit,period)=>rate(db,scope,account,limit,period)};}
+async function presentedMessages(db:BrowserDB,viewer:string|null,room:string,found:MessageRow[]):Promise<ChatMessage[]> {
+  const polls=await pollsForMessages(pollContext(db,viewer),room,found.filter(row=>row.kind==='poll'&&!row.deleted).map(row=>row.messageId));
+  return found.flatMap(row=>row.kind==='poll'&&!row.deleted?polls.has(row.messageId)?[{...message(row,viewer),poll:polls.get(row.messageId)!}]:[]:[message(row,viewer)]);
+}
 async function history(db: BrowserDB, viewer: string|null, url: URL) {
   const room = roomId(url.searchParams.get('room') || 'public'), afterValue = url.searchParams.get('after'), beforeValue = url.searchParams.get('before');
   if (afterValue !== null && beforeValue !== null) return fail('Choose older history or new messages.');
   const limit = Math.min(80, Math.max(1, number(url.searchParams.get('limit'), 50)));
   await requireRoom(db, room, viewer);
   const access = roomAccess(room, viewer);
+  const polls=pollContext(db,viewer);
   if (afterValue !== null) {
     const after = number(afterValue);
     const events = await rows<{id: number; message: number}>(db, 'SELECT e.id,e.message FROM kkeep_chat_events e WHERE e.room=? AND e.id>? AND ' + access.sql + ' ORDER BY e.id LIMIT ?', [room, after, ...access.args, limit + 1]);
     const page = events.slice(0, limit), ids = [...new Set(page.map(event => event.message))];
     const found = ids.length ? await messageRows(db, viewer, room, 'AND m.id IN (' + ids.map(() => '?').join(',') + ') ORDER BY m.id', ids) : [];
-    return reply({messages: found.map(row => message(row, viewer)), cursor: page.at(-1)?.id ?? after, hasMore: events.length > limit, oldestId: found[0]?.messageId ?? null});
+    const updates=await pollChanges(polls,room,number(url.searchParams.get('pollAfter')),limit);
+    const updatedRows=updates.ids.length?await messageRows(db,viewer,room,'AND m.id IN ('+updates.ids.map(()=>'?').join(',')+') ORDER BY m.id',updates.ids):[];
+    return reply({messages: await presentedMessages(db,viewer,room,found), cursor: page.at(-1)?.id ?? after, hasMore: events.length > limit, oldestId: found[0]?.messageId ?? null,pollCursor:updates.cursor,pollUpdates:await presentedMessages(db,viewer,room,updatedRows),pollHasMore:updates.hasMore});
   }
   // Freeze the event watermark before reading history; later sends cannot fall into a cursor gap.
   const watermark = await one<{cursor: number}>(db, 'SELECT COALESCE(MAX(id),0) AS cursor FROM kkeep_chat_events WHERE room=? AND ' + access.sql, [room, ...access.args]);
   const cursor = watermark?.cursor || 0, before = beforeValue === null ? null : number(beforeValue);
+  const pollCursor=await pollWatermark(polls,room);
   const found = await messageRows(db, viewer, room, "AND EXISTS (SELECT 1 FROM kkeep_chat_events e WHERE e.message=m.id AND e.kind='created' AND e.id<=?)" + (before !== null ? ' AND m.id<?' : '') + ' ORDER BY m.id DESC LIMIT ?', [cursor, ...(before !== null ? [before] : []), limit + 1]);
   const page = found.slice(0, limit).reverse();
-  return reply({messages: page.map(row => message(row, viewer)), cursor, hasMore: found.length > limit, oldestId: page[0]?.messageId ?? null});
+  return reply({messages: await presentedMessages(db,viewer,room,page), cursor, hasMore: found.length > limit, oldestId: page[0]?.messageId ?? null,pollCursor,pollUpdates:[],pollHasMore:false});
+}
+
+async function roster(db:BrowserDB,viewer:string|null,url:URL) {
+  const limit=Math.min(100,Math.max(1,number(url.searchParams.get('limit'),50))),cursor=url.searchParams.get('cursor'),visible=presenceVisibility(viewer);
+  let after:{online:number;account:string}|null=null;
+  if(cursor){const match=/^([01]):(.+)$/.exec(cursor);if(!match)return fail('Choose a valid member page.');after={online:Number(match[1]),account:id(match[2])};}
+  const counts=await one<{onlineCount:number;total:number}>(db,'SELECT COALESCE(SUM('+presenceOnlineSql+'),0) AS onlineCount,COUNT(*) AS total FROM kkeep_chat_profiles p WHERE '+visible.sql,visible.args);
+  const found=await rows<Row & {online:number}>(db,'SELECT '+profileColumns+','+presenceOnlineSql+' AS online FROM '+profileJoin+' WHERE '+visible.sql+(after?' AND (('+presenceOnlineSql+')<? OR (('+presenceOnlineSql+')=? AND p.account>?))':'')+' ORDER BY online DESC,p.account LIMIT ?',[...visible.args,...(after?[after.online,after.online,after.account]:[]),limit+1]);
+  const page=found.slice(0,limit),last=page.at(-1),hasMore=found.length>limit;
+  return reply({members:page.map(row=>({user:user(row),online:!!row.online})),onlineCount:counts?.onlineCount||0,offlineCount:(counts?.total||0)-(counts?.onlineCount||0),nextCursor:hasMore&&last?(last.online?'1':'0')+':'+last.id:null,hasMore,serverNow:Date.now()});
 }
 
 /** Read just enough raster structure to reject oversized canvases before decoding. */
@@ -420,6 +441,8 @@ export async function chatApi(request: Request, env: ChatEnv): Promise<Response>
         return reply({profile:profile(found),...relationship});
       }
       if(path==='/people') {await rate(db,'people',readKey,60,60000);return await people(db,viewerId,url);}
+      if(path==='/presence')return await roster(db,viewerId,url);
+      if(/^\/polls\/\d+$/.test(path))return reply({poll:await readPoll(pollContext(db,viewerId),number(path.slice('/polls/'.length)))});
       if(path==='/roles')return reply({roles:await roleList(db),canManageRoles:access.canManageRoles});
       if(path==='/messages') {
         const room=roomId(url.searchParams.get('room')||'public');
@@ -453,6 +476,24 @@ export async function chatApi(request: Request, env: ChatEnv): Promise<Response>
       return reply({profile: profile(social!)});
     }
     if (!social) return fail('Join Chat with your Kkeep Profile first.', 403, 'join_required');
+    if(path==='/presence'&&['PUT','DELETE'].includes(request.method)) {
+      await rate(db,'presence',viewer,60,60000);
+      return reply(await updatePresence(db,viewer,await body(request),request.method==='PUT'));
+    }
+    if(path==='/polls'&&request.method==='POST') {
+      assertParticipation(access,true);
+      const input=await body(request),room=roomId(input.roomId),clientId=id(input.clientId);
+      const created=await createPoll(pollContext(db,viewer),room,clientId,input);
+      const found=await messageRows(db,viewer,room,'AND m.id=?',[created.messageId]),posted=(await presentedMessages(db,viewer,room,found))[0];
+      if(!posted)return fail('This poll is no longer available.',403,'poll_unavailable');
+      return reply({message:posted},created.created?201:200);
+    }
+    const pollAction=/^\/polls\/(\d+)\/(vote|close)$/.exec(path);
+    if(pollAction&&((pollAction[2]==='vote'&&request.method==='PUT')||(pollAction[2]==='close'&&request.method==='POST'))) {
+      assertParticipation(access,true);
+      const messageId=number(pollAction[1]),ctx=pollContext(db,viewer);
+      return reply({poll:pollAction[2]==='vote'?await votePoll(ctx,messageId,await body(request)):await closePoll(ctx,messageId)});
+    }
     if(path==='/members'&&request.method==='GET') {
       if(!managed(access))return fail('You do not have permission to manage members.',403,'permission_required');
       const query=(url.searchParams.get('q')||'').normalize('NFKC').trim();
@@ -553,10 +594,10 @@ export async function chatApi(request: Request, env: ChatEnv): Promise<Response>
     if (path === '/profile' && request.method === 'PATCH') {
       const input = await body(request), name = input.displayName === undefined ? social.displayName : displayName(input.displayName), bio = input.bio === undefined ? social.bio : text(input.bio, CHAT_BIO_MAX, 'Your bio', false);
       const nameColor = color(input.nameColor,social.nameColor), primaryColor = color(input.primaryColor,social.primaryColor), secondaryColor = color(input.secondaryColor,social.secondaryColor);
-      const avatarDecoration=choice(input.avatarDecoration,CHAT_AVATAR_DECORATIONS,social.avatarDecoration),nameplateStyle=choice(input.nameplateStyle,CHAT_NAMEPLATE_STYLES,social.nameplateStyle);
+      const avatarDecoration=choice(input.avatarDecoration,CHAT_AVATAR_DECORATIONS,social.avatarDecoration),nameplateStyle=choice(input.nameplateStyle,CHAT_NAMEPLATE_STYLES,social.nameplateStyle),profileFrame=choice(input.profileFrame,CHAT_PROFILE_FRAMES,social.profileFrame);
       await rate(db, 'profile', viewer, 30, 3600000);
       const eligible=activeSql(viewer);
-      const changed=await statement(db, 'UPDATE kkeep_chat_profiles SET display_name=?,search_key=?,bio=?,name_color=?,primary_color=?,secondary_color=?,avatar_decoration=?,nameplate_style=?,updated=? WHERE account=? AND EXISTS(SELECT 1 FROM kkeep_accounts a WHERE a.id=? AND a.username=?) AND '+eligible.sql, [name, normalizeText(name + ' ' + account.username), bio, nameColor, primaryColor, secondaryColor,avatarDecoration,nameplateStyle, Date.now(), viewer,viewer,account.username,...eligible.args]).run();
+      const changed=await statement(db, 'UPDATE kkeep_chat_profiles SET display_name=?,search_key=?,bio=?,name_color=?,primary_color=?,secondary_color=?,avatar_decoration=?,nameplate_style=?,profile_frame=?,updated=? WHERE account=? AND EXISTS(SELECT 1 FROM kkeep_accounts a WHERE a.id=? AND a.username=?) AND '+eligible.sql, [name, normalizeText(name + ' ' + account.username), bio, nameColor, primaryColor, secondaryColor,avatarDecoration,nameplateStyle,profileFrame, Date.now(), viewer,viewer,account.username,...eligible.args]).run();
       if(!changed.meta.changes)return fail('Your username changed on another device. Refresh and try again.',409,'profile_changed');
       return reply({profile: profile((await loadProfile(db, viewer))!)});
     }
@@ -617,9 +658,9 @@ export async function chatApi(request: Request, env: ChatEnv): Promise<Response>
       assertParticipation(access,true);
       const input = await body(request), room = roomId(input.roomId), clientId = id(input.clientId), content = text(input.text, CHAT_MESSAGE_MAX, 'Your message');
       await requireRoom(db, room, viewer, true);
-      const existing = await one<{room: string; text: string}>(db, 'SELECT room,text FROM kkeep_chat_messages WHERE author=? AND client_id=?', [viewer, clientId]);
+      const existing = await one<{room: string; text: string;kind:string}>(db, 'SELECT room,text,kind FROM kkeep_chat_messages WHERE author=? AND client_id=?', [viewer, clientId]);
       if (existing) {
-        if (existing.room !== room || existing.text !== content) return fail('This send ID was already used. Start a new message.', 409, 'idempotency_conflict');
+        if (existing.room !== room || existing.text !== content||existing.kind!=='text') return fail('This send ID was already used. Start a new message.', 409, 'idempotency_conflict');
         const found = (await messageRows(db, viewer, room, 'AND m.author=? AND m.client_id=?', [viewer, clientId]))[0];
         if (!found) return fail('This conversation is unavailable.', 403);
         return reply({message: message(found, viewer)});
@@ -633,7 +674,7 @@ export async function chatApi(request: Request, env: ChatEnv): Promise<Response>
       ]);
       const found = (await messageRows(db, viewer, room, 'AND m.author=? AND m.client_id=?', [viewer, clientId]))[0];
       if (!found) return fail('This conversation is unavailable.', 403, 'conversation_unavailable');
-      if (found.text !== content) return fail('This send ID was already used.', 409, 'idempotency_conflict');
+      if (found.text !== content||found.kind!=='text') return fail('This send ID was already used.', 409, 'idempotency_conflict');
       return reply({message: message(found, viewer)}, 201);
     }
     if (path.startsWith('/messages/') && request.method === 'DELETE') {
@@ -685,6 +726,7 @@ export async function chatApi(request: Request, env: ChatEnv): Promise<Response>
     }
     return reply({error: 'Chat route or method not found.', code: 'not_found'}, 404);
   } catch (error) {
+    if(error instanceof PollError||error instanceof PresenceError)return reply({error:error.message,code:error.code},error.status);
     if (error instanceof ChatError) return Response.json({error: error.message, code: error.code}, {status: error.status, headers: {...jsonHeaders, ...(error.retryAfter ? {'Retry-After': String(error.retryAfter)} : {})}});
     return reply({error: 'Chat could not complete this request. Please try again.', code: 'chat_unavailable'}, 503);
   }

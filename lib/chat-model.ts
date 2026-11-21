@@ -3,10 +3,12 @@ export const CHAT_PERMISSIONS = ['delete_messages','timeout_members','ban_member
 export type ChatPermission = typeof CHAT_PERMISSIONS[number];
 export type ChatRoleBadge = {id:string;name:string;color:string;position:number};
 export type ChatRole = ChatRoleBadge & {permissions:ChatPermission[]};
-export const CHAT_AVATAR_DECORATIONS = ['none','solar','fangs','wraith','sakura','crescent','shadow','wings'] as const;
-export const CHAT_NAMEPLATE_STYLES = ['none','ravens','crimson','moonlight','ocean','haunted','ink'] as const;
+export const CHAT_AVATAR_DECORATIONS = ['none','solar','fangs','wraith','sakura','crescent','shadow','wings','petal-blades','blossom-bough','rift','soulfire','candlelight','web','vampire','hellfire','bone-jaw','hood','scholar','storm','phoenix','shark','flare','hex','watcher'] as const;
+export const CHAT_NAMEPLATE_STYLES = ['none','ravens','crimson','moonlight','ocean','haunted','ink','orbit','citadel','aurora','webbed','fracture','current','gaze','embers'] as const;
+export const CHAT_PROFILE_FRAMES = ['none','celestial','obsidian-rose','eclipse','blue-flame','violet-rose','thorns','many-eyes','frost-rose','ivory-rose','ember-flame','phantom','blossom','gilded-thorns'] as const;
 export type ChatAvatarDecoration = typeof CHAT_AVATAR_DECORATIONS[number];
 export type ChatNameplateStyle = typeof CHAT_NAMEPLATE_STYLES[number];
+export type ChatProfileFrame = typeof CHAT_PROFILE_FRAMES[number];
 export type ChatModeration = {banned:boolean;timeoutUntil:number|null};
 export type ChatAccess = ChatModeration & {isOwner:boolean;permissions:ChatPermission[];canManageRoles:boolean;canClaimOwner:boolean};
 export type ChatUser = {
@@ -21,7 +23,7 @@ export type ChatUser = {
   roles: ChatRoleBadge[];
   isOwner: boolean;
 };
-export type ChatProfile = ChatUser & {bio: string; joinedAt: number; bannerUrl: string | null; primaryColor: string; secondaryColor: string};
+export type ChatProfile = ChatUser & {bio: string; joinedAt: number; bannerUrl: string | null; primaryColor: string; secondaryColor: string;profileFrame:ChatProfileFrame};
 export type ChatRelationship = 'self' | 'none' | 'friends' | 'incoming' | 'outgoing' | 'blocked';
 export type ChatPerson = ChatUser & {relationship: ChatRelationship; requestId?: string};
 export type ChatFriend = {
@@ -39,12 +41,17 @@ export type ChatMessage = {
   text: string;
   createdAt: number;
   deleted: boolean;
+  poll?: ChatPoll;
   /** Returned only to the author; lets an uncertain send retry safely. */
   clientId?: string;
 };
 export type ChatSession = {account: {id: string; name: string; username:string} | null; profile: ChatProfile | null; memberCount: number;access:ChatAccess};
 export type ChatMember = {user:ChatUser;moderation:ChatModeration;canTimeout:boolean;canBan:boolean};
-export type ChatMessagesPage = {messages: ChatMessage[]; cursor: number; hasMore: boolean; oldestId: number | null};
+export type ChatMessagesPage = {messages: ChatMessage[]; cursor: number; hasMore: boolean; oldestId: number | null;pollCursor:number;pollUpdates:ChatMessage[];pollHasMore:boolean};
+export type ChatPollOption={id:string;label:string;votes:number;percentage:number;selected:boolean};
+export type ChatPoll={messageId:number;question:string;options:ChatPollOption[];allowMultiple:boolean;totalVoters:number;totalVotes:number;viewerOptionIds:string[];closesAt:number;closedAt:number|null;closed:boolean;canVote:boolean;canClose:boolean;serverNow:number};
+export type ChatPresenceMember={user:ChatUser;online:boolean};
+export type ChatPresencePage={members:ChatPresenceMember[];onlineCount:number;offlineCount:number;nextCursor:string|null;hasMore:boolean;serverNow:number};
 export type ChatFriends = {friends: ChatFriend[]; incoming: ChatFriend[]; outgoing: ChatFriend[]};
 export type ChatChannel = {id: string; name: string; category: string; readOnly: boolean};
 export type ChatChannels = {channels: ChatChannel[]; canManageChannels: boolean; ownerConfigured: boolean; ownerSignedIn: boolean};
@@ -64,3 +71,8 @@ export const CHAT_MESSAGE_MAX = 2000;
 export const CHAT_BIO_MAX = 160;
 export const CHAT_AVATAR_MAX = 2 * 1024 * 1024;
 export const CHAT_GIF_MAX = 8 * 1024 * 1024;
+export const CHAT_POLL_QUESTION_MAX=240;
+export const CHAT_POLL_OPTION_MAX=100;
+export const CHAT_POLL_MAX_OPTIONS=10;
+export const CHAT_POLL_MAX_DURATION=30*24*60*60*1000;
+export const CHAT_PRESENCE_LEASE_MS=90000;

@@ -64,6 +64,13 @@
       "when": 1795223407349,
       "tag": "0008_chat_profiles_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1795226179595,
+      "tag": "0009_chat_polls_presence",
+      "breakpoints": true
     }
   ]
 }
